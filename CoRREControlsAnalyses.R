@@ -26,3 +26,16 @@ meanslope<-slope%>%
   group_by(site_project_comm)%>%
   summarise(meanslope=mean(rate_change))%>%
   ungroup()
+
+
+##trying intervals It is ALL directional change except for 1 or 2!!
+##you need to read in intervals - I already have it in my working environment and didn't set the path for you.
+
+ave_int<-rt_change_int%>%
+  group_by(site_project_comm, interval)%>%
+  summarise(meandist=mean(distance))
+
+ggplot(data=ave_int, aes(x=interval, y=meandist))+
+  geom_point()+
+  facet_wrap(~site_project_comm, scales="free")
+  
