@@ -31,6 +31,8 @@ meanslope<-slope%>%
 ##trying intervals It is ALL directional change except for 1 or 2!!
 ##you need to read in intervals - I already have it in my working environment and didn't set the path for you.
 
+rt_change_int<- read.csv("rate_change_interval_all.csv")
+
 ave_int<-rt_change_int%>%
   group_by(site_project_comm, interval)%>%
   summarise(meandist=mean(distance))
@@ -39,3 +41,7 @@ ggplot(data=ave_int, aes(x=interval, y=meandist))+
   geom_point()+
   facet_wrap(~site_project_comm, scales="free")
   
+
+ggplot(data=rt_change_int, aes(x=interval, y=distance))+
+  geom_point()+
+  facet_wrap(~site_project_comm, scales="free")
