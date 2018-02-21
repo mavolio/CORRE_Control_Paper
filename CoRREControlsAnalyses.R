@@ -17,7 +17,7 @@ change<-read.csv("Comm_change_all.csv")%>%
 
 ggplot(data=change, aes(x=end, y=composition_change))+
   geom_point()+
-  facet_wrap(~site_project_comm, scales="free_x")
+  facet_wrap(~site_project_comm, scales="free")
 
 #Read in data
 slope<-read.csv("rate_change_all.csv")
