@@ -18,3 +18,11 @@ change<-read.csv("Comm_change.csv")%>%
 ggplot(data=change, aes(x=end, y=composition_change))+
   geom_point()+
   facet_wrap(~site_project_comm, scales="free_x")
+
+#Read in data
+slope<-read.csv("rate_change_nograze.csv")
+
+meanslope<-slope%>%
+  group_by(site_project_comm)%>%
+  summarise(meanslope=mean(rate_change))%>%
+  ungroup()
