@@ -60,9 +60,10 @@ unique(codyndat_subset$site_project_comm)
 ### reading in and CLEANING grazing DATASET
 grazing<-read.csv("~/Dropbox/lights in the prairie/GExforCoRREControlMS.csv")%>%
   mutate(site_project_comm = site, calendar_year = year,
-         plot_id = paste (exage, block, plot, sep = ""))%>%
+         plot_id = paste (block, plot, sep = "_"))%>%
   filter(site_project_comm != "KRNP_Lammertjiesleegte")%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
+
 
 
 data<-rbind(grazing, codyndat_subset, corredat_controls)
@@ -83,17 +84,16 @@ for (i in 1:length(spc)){
   
   mult_change<-rbind(mult_change, out)
 }
-write.csv(mult_change, '~/Dropbox/converge_diverge/Control Paper/Output/Comm_change.csv')
+write.csv(mult_change, '~/Dropbox/converge_diverge/Control Paper/Output/Comm_change_all.csv')
 hist(mult_change$composition_change)
 
 #####look at directional change with intervals #I am not sure which one we want
-nograze<-data<-rbind(codyndat_subset, corredat_controls)
-spc<-unique(nograze$site_project_comm)
+spc<-unique(data$site_project_comm)
 rt_change_int<-data.frame()
 
 for (i in 1:length(spc)){
   
-  subset<-nograze%>%
+  subset<-data%>%
     filter(site_project_comm==spc[i])
   
   out<-rate_change_interval(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
@@ -101,15 +101,14 @@ for (i in 1:length(spc)){
   
   rt_change_int<-rbind(rt_change_int, out)
 }
-write.csv(rt_change_int, '~/Dropbox/converge_diverge/Control Paper/Output/rate_change_interval_nograze.csv')
+write.csv(rt_change_int, '~/Dropbox/converge_diverge/Control Paper/Output/rate_change_interval_all.csv')
 #####look at directional change
-nograze<-data<-rbind(codyndat_subset, corredat_controls)
-spc<-unique(nograze$site_project_comm)
+spc<-unique(data$site_project_comm)
 rt_change<-data.frame()
 
 for (i in 1:length(spc)){
   
-  subset<-nograze%>%
+  subset<-data%>%
     filter(site_project_comm==spc[i])
   
   out<-rate_change(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
@@ -117,7 +116,5 @@ for (i in 1:length(spc)){
   
   rt_change<-rbind(rt_change, out)
 }
-write.csv(rt_change, '~/Dropbox/converge_diverge/Control Paper/Output/rate_change_nograze.csv')
+write.csv(rt_change, '~/Dropbox/converge_diverge/Control Paper/Output/rate_change_all.csv')
 
-##trouble shooting grazing datasets
-rate_change(subset(grazing, site_project_comm="KLEE_wildlife"),time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
