@@ -2,7 +2,7 @@ library(tidyverse)
 library(codyn)
 
 ###reading in list of datasets to use
-list<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\Control Paper\\controls_data list.csv")%>%
+list<-read.csv("~/Dropbox/converge_diverge/Control Paper/controls_data list.csv")%>%
   mutate(site_project_comm = paste (site_code, project_name, community_type, sep = "_"),
          keep = 1)
 
@@ -58,7 +58,7 @@ unique(codyndat_subset$site_project_comm)
 
 
 ### reading in and CLEANING grazing DATASET
-grazing<-read.csv("~/Dropbox/lights in the prairie/GExforCoRREControlMS.csv")%>%
+grazing<-read.csv("~/Dropbox/Konza Research/lights in the prairie/GExforCoRREControlMS.csv")%>%
   mutate(site_project_comm = site, calendar_year = year,
          plot_id = paste (block, plot, sep = "_"))%>%
   filter(site_project_comm != "KRNP_Lammertjiesleegte")%>%
@@ -68,6 +68,8 @@ grazing<-read.csv("~/Dropbox/lights in the prairie/GExforCoRREControlMS.csv")%>%
 
 data<-rbind(grazing, codyndat_subset, corredat_controls)
 unique(data$site_project_comm)
+
+write.csv(data, "~/Dropbox/C2E/Products/Control Paper/original_subset_data.csv")
 
 
 #####look at mult change
