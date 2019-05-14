@@ -11,6 +11,9 @@ theme_update(axis.title.x=element_text(size=20, vjust=-0.35, margin=margin(t=15)
 ## Kim's desktop
 setwd("C:/Users/la pierrek/Dropbox (Smithsonian)/working groups/converge diverge working group/converge_diverge/Control Paper/Output")
 
+## Sally's desktop
+setwd("~/Dropbox/converge_diverge/Control Paper/Output")
+
 #Read in data
 change<-read.csv("Comm_change_all.csv")%>%
   separate(calendar_year_pair, c("start", "end"), sep="-")
