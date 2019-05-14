@@ -1,39 +1,48 @@
 library(tidyverse)
 library(codyn)
 
+## Sally's desktop
+setwd("~/Dropbox/C2E/Products/Control Paper")
+
 ###reading in list of datasets to use
-list<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\Control Paper\\controls_data list.csv")%>%
+list<-read.csv("controls_data list.csv")%>%
   mutate(site_project_comm = paste (site_code, project_name, community_type, sep = "_"),
          keep = 1)
 
 ###reading in and cleaning corre data
-corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_March2019.csv")%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")%>%
   select(site_code, project_name, community_type, calendar_year, genus_species, relcov, treatment, plot_id, site_project_comm)
 
-corredat_info<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/ExperimentInformation_Nov2017.csv")%>%
+corredat_info<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/ExperimentInformation_March2019.csv")%>%
+  select(-X)%>%
+  mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
+  filter(site_project_comm!="GVN_FACE_0")
+
+corredat_siteinfo<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SiteExperimentDetails_March2019.csv")%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")
 
 corredat_controls<-corredat%>%
   left_join(corredat_info)%>%
-  filter(plot_mani==0)%>%
-  select(site_project_comm, calendar_year, plot_id, genus_species, relcov)%>%
-  filter(site_project_comm %in% c("ANG_watering_0","ARC_MAT2_0","BUX_PQ_0","CDR_e001_D","JSP_GCE_0","KBS_T7_0","KLU_BFFert_0", "KUFS_E6_type1", "NWT_bowman_DryBowman","SERC_TMECE_MX"))
+  left_join(corredat_siteinfo)%>%
+  filter(plot_mani==0, experiment_length>7, successional==0)%>%
+  select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
+
 
 unique(corredat_controls$site_project_comm)
 
 
 ### reading in and CLEANING CODYN DATASET
 #restrict to species that are present in an experiment
-codyndat<-read.csv('~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv')%>%
+codyndat<-read.csv('relative cover_nceas and converge_12012015_cleaned.csv')%>%
   gather(species, abundance, sp1:sp99)%>%
   filter(site_code!="MISS")
 
-codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv")%>%
+codyndat_info<-read.csv("siteinfo_key.csv")%>%
   filter(site_project_comm!="")
 
 splist<-codyndat%>%
@@ -49,19 +58,20 @@ codyndat_clean<-merge(codyndat, splist, by=c("site_code","project_name","communi
   select(-X, -sitesubplot, -site_code, -project_name, -community_type)%>%
   mutate(id=paste(site_project_comm, plot_id, sep="::"))%>%
   mutate(genus_species=species, calendar_year = experiment_year, relcov = abundance, site_project_comm)%>%
-  select(site_project_comm, calendar_year, plot_id, genus_species, relcov)
+  left_join(codyndat_info)
 
 codyndat_subset<-codyndat_clean%>%
-  filter(site_project_comm %in% c("HAY_kansas_0","JRN_NPP_0","KNZ_00id_0","SEV_veg_G","SGS_UNUN_0"))
+  filter(dataset_length>7, broad_ecosystem_type=="herbaceous", taxa=="plants", succession=="no")%>%
+  select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
+
 
 unique(codyndat_subset$site_project_comm)
 
 
 ### reading in and CLEANING grazing DATASET
-grazing<-read.csv("~/Dropbox/lights in the prairie/GExforCoRREControlMS.csv")%>%
+grazing<-read.csv("GExforCoRREControlMS.csv")%>%
   mutate(site_project_comm = site, calendar_year = year,
          plot_id = paste (block, plot, sep = "_"))%>%
-  filter(site_project_comm != "KRNP_Lammertjiesleegte")%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
 
 
@@ -84,7 +94,7 @@ for (i in 1:length(spc)){
   
   mult_change<-rbind(mult_change, out)
 }
-write.csv(mult_change, '~/Dropbox/converge_diverge/Control Paper/Output/Comm_change_all.csv')
+write.csv(mult_change, 'Comm_change_all_May2019.csv')
 hist(mult_change$composition_change)
 
 #####look at directional change with intervals #I am not sure which one we want
@@ -101,7 +111,7 @@ for (i in 1:length(spc)){
   
   rt_change_int<-rbind(rt_change_int, out)
 }
-write.csv(rt_change_int, '~/Dropbox/converge_diverge/Control Paper/Output/rate_change_interval_all.csv')
+write.csv(rt_change_int, 'rate_change_interval_all_May2019.csv')
 #####look at directional change
 spc<-unique(data$site_project_comm)
 rt_change<-data.frame()
@@ -116,5 +126,5 @@ for (i in 1:length(spc)){
   
   rt_change<-rbind(rt_change, out)
 }
-write.csv(rt_change, '~/Dropbox/converge_diverge/Control Paper/Output/rate_change_all.csv')
+write.csv(rt_change, 'rate_change_all_May2019.csv')
 
