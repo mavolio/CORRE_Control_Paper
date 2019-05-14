@@ -12,10 +12,12 @@ theme_update(axis.title.x=element_text(size=20, vjust=-0.35, margin=margin(t=15)
 setwd("C:/Users/la pierrek/Dropbox (Smithsonian)/working groups/converge diverge working group/converge_diverge/Control Paper/Output")
 
 ## Sally's desktop
-setwd("~/Dropbox/converge_diverge/Control Paper/Output")
+setwd("~/Dropbox/C2E/Products/Control Paper")
 
 #Read in data
-change<-read.csv("Comm_change_all.csv")%>%
+change<-read.csv("Comm_change_all_May2019.csv")%>%
+  rename(start=calendar_year)%>%
+  rename(end=calendar_year2)
   separate(calendar_year_pair, c("start", "end"), sep="-")
 
 ggplot(data=change, aes(x=end, y=composition_change))+
@@ -23,7 +25,7 @@ ggplot(data=change, aes(x=end, y=composition_change))+
   facet_wrap(~site_project_comm, scales="free")
 
 #Read in data
-slope<-read.csv("rate_change_all.csv")
+slope<-read.csv("rate_change_all_May2019.csv")
 
 meanslope<-slope%>%
   group_by(site_project_comm)%>%
@@ -34,7 +36,7 @@ meanslope<-slope%>%
 ##trying intervals It is ALL directional change except for 1 or 2!!
 ##you need to read in intervals - I already have it in my working environment and didn't set the path for you.
 
-rt_change_int<- read.csv("rate_change_interval_all.csv")
+rt_change_int<- read.csv("rate_change_interval_all_May2019.csv")
 
 ave_int<-rt_change_int%>%
   group_by(site_project_comm, interval)%>%
