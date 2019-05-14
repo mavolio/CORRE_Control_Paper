@@ -5,7 +5,11 @@ library(codyn)
 setwd("~/Dropbox/C2E/Products/Control Paper")
 
 ###reading in list of datasets to use
+<<<<<<< HEAD
 list<-read.csv("controls_data list.csv")%>%
+=======
+list<-read.csv("~/Dropbox/converge_diverge/Control Paper/controls_data list.csv")%>%
+>>>>>>> e58dd5fac2bd257acd5df894550221ddc1de87d7
   mutate(site_project_comm = paste (site_code, project_name, community_type, sep = "_"),
          keep = 1)
 
@@ -69,7 +73,11 @@ unique(codyndat_subset$site_project_comm)
 
 
 ### reading in and CLEANING grazing DATASET
+<<<<<<< HEAD
 grazing<-read.csv("GExforCoRREControlMS.csv")%>%
+=======
+grazing<-read.csv("~/Dropbox/Konza Research/lights in the prairie/GExforCoRREControlMS.csv")%>%
+>>>>>>> e58dd5fac2bd257acd5df894550221ddc1de87d7
   mutate(site_project_comm = site, calendar_year = year,
          plot_id = paste (block, plot, sep = "_"))%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
@@ -78,6 +86,8 @@ grazing<-read.csv("GExforCoRREControlMS.csv")%>%
 
 data<-rbind(grazing, codyndat_subset, corredat_controls)
 unique(data$site_project_comm)
+
+write.csv(data, "~/Dropbox/C2E/Products/Control Paper/original_subset_data.csv")
 
 
 #####look at mult change
