@@ -18,7 +18,6 @@ setwd("~/Dropbox/C2E/Products/Control Paper")
 change<-read.csv("Comm_change_all_May2019.csv")%>%
   rename(start=calendar_year)%>%
   rename(end=calendar_year2)
-  separate(calendar_year_pair, c("start", "end"), sep="-")
 
 ggplot(data=change, aes(x=end, y=composition_change))+
   geom_point()+

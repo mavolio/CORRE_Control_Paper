@@ -33,8 +33,19 @@ corredat_controls<-corredat%>%
   filter(plot_mani==0, experiment_length>7, successional==0)%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
 
+datasetlength<-corredat_controls%>%
+select(site_project_comm, calendar_year)%>%
+  unique()%>%
+  group_by(site_project_comm)%>%
+  summarise(length=n())%>%
+  filter(length>7)%>%
+  select(-length)
+  
+corredat_controls2<-corredat_controls%>%
+  right_join(datasetlength)
 
-unique(corredat_controls$site_project_comm)
+
+unique(corredat_controls2$site_project_comm)
 
 
 ### reading in and CLEANING CODYN DATASET
@@ -77,7 +88,7 @@ grazing<-read.csv("GExforCoRREControlMS.csv")%>%
 
 
 
-data<-rbind(grazing, codyndat_subset, corredat_controls)
+data<-rbind(grazing, codyndat_subset, corredat_controls2)
 unique(data$site_project_comm)
 
 write.csv(data, "control_subset_data.csv")
