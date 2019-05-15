@@ -5,11 +5,8 @@ library(codyn)
 setwd("~/Dropbox/C2E/Products/Control Paper")
 
 ###reading in list of datasets to use
-<<<<<<< HEAD
+
 list<-read.csv("controls_data list.csv")%>%
-=======
-list<-read.csv("~/Dropbox/converge_diverge/Control Paper/controls_data list.csv")%>%
->>>>>>> e58dd5fac2bd257acd5df894550221ddc1de87d7
   mutate(site_project_comm = paste (site_code, project_name, community_type, sep = "_"),
          keep = 1)
 
@@ -36,8 +33,19 @@ corredat_controls<-corredat%>%
   filter(plot_mani==0, experiment_length>7, successional==0)%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
 
+datasetlength<-corredat_controls%>%
+select(site_project_comm, calendar_year)%>%
+  unique()%>%
+  group_by(site_project_comm)%>%
+  summarise(length=n())%>%
+  filter(length>7)%>%
+  select(-length)
+  
+corredat_controls2<-corredat_controls%>%
+  right_join(datasetlength)
 
-unique(corredat_controls$site_project_comm)
+
+unique(corredat_controls2$site_project_comm)
 
 
 ### reading in and CLEANING CODYN DATASET
@@ -73,21 +81,17 @@ unique(codyndat_subset$site_project_comm)
 
 
 ### reading in and CLEANING grazing DATASET
-<<<<<<< HEAD
 grazing<-read.csv("GExforCoRREControlMS.csv")%>%
-=======
-grazing<-read.csv("~/Dropbox/Konza Research/lights in the prairie/GExforCoRREControlMS.csv")%>%
->>>>>>> e58dd5fac2bd257acd5df894550221ddc1de87d7
   mutate(site_project_comm = site, calendar_year = year,
          plot_id = paste (block, plot, sep = "_"))%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
 
 
 
-data<-rbind(grazing, codyndat_subset, corredat_controls)
+data<-rbind(grazing, codyndat_subset, corredat_controls2)
 unique(data$site_project_comm)
 
-write.csv(data, "~/Dropbox/C2E/Products/Control Paper/original_subset_data.csv")
+write.csv(data, "control_subset_data.csv")
 
 
 #####look at mult change
