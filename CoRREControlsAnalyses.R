@@ -26,6 +26,7 @@ ggplot(data=change, aes(x=end, y=composition_change))+
 #Read in data
 slope<-read.csv("rate_change_all_May2019.csv")
 
+
 meanslope<-slope%>%
   group_by(site_project_comm)%>%
   summarise(meanslope=mean(rate_change))%>%
