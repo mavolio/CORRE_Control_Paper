@@ -84,14 +84,15 @@ unique(codyndat_subset$site_project_comm)
 grazing<-read.csv("GExforCoRREControlMS.csv")%>%
   mutate(site_project_comm = site, calendar_year = year,
          plot_id = paste (block, plot, sep = "_"))%>%
-  select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
+  select(site_project_comm, calendar_year, genus_species, relcov, plot_id)%>%
+  mutate(relcov=relcov/100)
 
 
 
 data<-rbind(grazing, codyndat_subset, corredat_controls2)
 unique(data$site_project_comm)
 
-write.csv(data, "control_subset_data.csv")
+#write.csv(data, "control_subset_data.csv")
 
 
 #####look at mult change
@@ -111,6 +112,17 @@ for (i in 1:length(spc)){
 write.csv(mult_change, 'Comm_change_all_May2019.csv')
 hist(mult_change$composition_change)
 
+change_cumsum<-mult_change%>%
+  group_by(site_project_comm)%>%
+  mutate_at(vars(composition_change), 
+            list(cumsum))%>%
+  rename(start=calendar_year)%>%
+  rename(end=calendar_year2)%>%
+  rename(cumsum=composition_change)%>%
+  select(-dispersion_change)
+
+write.csv(change_sumsum, 'Change_Cumsum_May2019.csv')
+
 #####look at directional change with intervals #I am not sure which one we want
 spc<-unique(data$site_project_comm)
 rt_change_int<-data.frame()
@@ -126,6 +138,7 @@ for (i in 1:length(spc)){
   rt_change_int<-rbind(rt_change_int, out)
 }
 write.csv(rt_change_int, 'rate_change_interval_all_May2019.csv')
+
 #####look at directional change
 spc<-unique(data$site_project_comm)
 rt_change<-data.frame()
