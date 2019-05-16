@@ -1,6 +1,7 @@
 library(tidyverse)
 library(vegan)
 library(codyn)
+library(PerformanceAnalytics)
 
 
 ## Sally's desktop
@@ -347,7 +348,8 @@ SiteLevelData<-SiteInfo %>%
 
 ####Regressions
 
-pairs(SiteLevelData[,c(2:12)])
+pairs(SiteLevelData[,c(2:13)])
+chart.Correlation(SiteLevelData[,2:13], histogram=TRUE, method="Pearson")
 
 ### make things in long form
 
