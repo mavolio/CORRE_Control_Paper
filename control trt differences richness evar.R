@@ -13,7 +13,7 @@ corredat<-read.csv("converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_
 #gvn face - only 2 years of data so will only have one point for the dataset, therefore we are removing this dataset from these analyses.
 corredat1<-corredat%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
-  filter(site_project_comm!="GVN_FACE_0", site_project_comm!="AZI_NitPhos_0", site_project_comm!="JRN_study278_0", site_project_comm!="KNZ_GFP_4F", site_project_comm!="Saskatchewan_CCD_0", project_name!="e001", project_name!="e002")
+  filter(site_project_comm!="GVN_FACE_0", site_project_comm!="AZI_NitPhos_0", site_project_comm!="JRN_study278_0", site_project_comm!="KNZ_GFP_4F", site_project_comm!="Saskatchewan_CCD_0", project_name!="e001", project_name!="e002", site_project_comm!="CHY_EDGE_0", site_project_comm!="SGS_EDGE_0", site_project_comm!="HYS_EDGE_0")
 
 ##several studies only have two measurments of a plot. I am dropping those plots
 azi<-corredat%>%
@@ -109,6 +109,80 @@ ggplot(data=subset(div_info, site_project_comm=="KNZ_pplots_0"), aes(x=treatment
   geom_smooth(method="lm", se=F)
 
 ggplot(data=subset(div_info, site_project_comm=="SERC_CXN_0"), aes(x=treatment_year, y=Evar, color=treatment))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)
+
+
+###comparing change in controls over time versus C-T differences over time.
+corredat2<-corredat_raw%>%
+  left_join(treatment_info)
+
+controls<-corredat2%>%
+  filter(plot_mani==0)
+
+spc<-unique(controls$site_project_comm)
+control_change<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-controls%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-RAC_change(subset, time.var = 'treatment_year', species.var="genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  control_change<-rbind(control_change, out)
+}
+
+cont_ave<-control_change %>% 
+  group_by(site_project_comm, plot_id)%>%
+  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
+  ungroup() %>% 
+  group_by(site_project_comm) %>% 
+  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)
+
+###looking at C-T differences over time
+corredat_ct<-corredat2%>%
+  mutate(treatment2=as.character(treatment)) %>% 
+  mutate(trt=ifelse(plot_mani==0, "C", corredat_ct$treatment2))
+
+spc<-unique(corredat_ct$site_project_comm)
+ct_diff<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-corredat_ct%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-RAC_difference(subset, time.var = 'treatment_year', species.var="genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', reference.treatment = "C", pool=T, treatment.var = "trt")
+  
+  out$site_project_comm<-spc[i]
+  
+  ct_diff<-rbind(ct_diff, out)
+}
+
+ct_ave<-ct_diff %>% 
+  group_by(trt, trt2, site_project_comm) %>% 
+  summarize_at(vars(richness_diff, evenness_diff, rank_diff, species_diff), list(mean), na.rm=T)
+
+ct_cont_compare<-ct_ave%>%
+  left_join(cont_ave)
+
+ggplot(data=ct_cont_compare, aes(x=abs(richness_change), y=abs(richness_diff)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)
+
+ggplot(data=ct_cont_compare, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)
+
+ggplot(data=ct_cont_compare, aes(x=rank_change, y=rank_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)
+
+ggplot(data=ct_cont_compare, aes(x=gains, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)
+
+ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)
 
