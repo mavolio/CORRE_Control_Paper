@@ -1,14 +1,10 @@
 library(tidyverse)
 library(codyn)
 
+
 ## Sally's desktop
 setwd("~/Dropbox/C2E/Products/Control Paper")
 
-###reading in list of datasets to use
-
-list<-read.csv("controls_data list.csv")%>%
-  mutate(site_project_comm = paste (site_code, project_name, community_type, sep = "_"),
-         keep = 1)
 
 ###reading in and cleaning corre data
 corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_March2019.csv")%>%
@@ -94,6 +90,12 @@ unique(data$site_project_comm)
 
 #write.csv(data, "control_subset_data.csv")
 
+#get data list
+datalist<-data%>%
+  select(site_project_comm) %>% 
+  unique()
+#write.csv(datalist, "datasets_used_May2019.csv")
+
 
 #####look at mult change
 spc<-unique(data$site_project_comm)
@@ -109,8 +111,13 @@ for (i in 1:length(spc)){
   
   mult_change<-rbind(mult_change, out)
 }
-write.csv(mult_change, 'Comm_change_all_May2019.csv')
+#write.csv(mult_change, 'Comm_change_all_May2019.csv')
+
 hist(mult_change$composition_change)
+mult_change2<-mult_change %>% 
+  group_by(site_project_comm)%>%
+  summarise(composition_change=mean(composition_change))
+hist(mult_change2$composition_change)
 
 change_cumsum<-mult_change%>%
   group_by(site_project_comm)%>%
@@ -120,8 +127,13 @@ change_cumsum<-mult_change%>%
   rename(end=calendar_year2)%>%
   rename(cumsum=composition_change)%>%
   select(-dispersion_change)
+hist(change_cumsum$cumsum)
+change_cumsum2<-change_cumsum %>% 
+  group_by(site_project_comm)%>%
+  summarise(cumsum=mean(cumsum))
+hist(change_cumsum2$cumsum)
 
-write.csv(change_sumsum, 'Change_Cumsum_May2019.csv')
+#write.csv(change_sumsum, 'Change_Cumsum_May2019.csv')
 
 #####look at directional change with intervals #I am not sure which one we want
 spc<-unique(data$site_project_comm)
@@ -137,7 +149,7 @@ for (i in 1:length(spc)){
   
   rt_change_int<-rbind(rt_change_int, out)
 }
-write.csv(rt_change_int, 'rate_change_interval_all_May2019.csv')
+#write.csv(rt_change_int, 'rate_change_interval_all_May2019.csv')
 
 #####look at directional change
 spc<-unique(data$site_project_comm)
@@ -153,5 +165,93 @@ for (i in 1:length(spc)){
   
   rt_change<-rbind(rt_change, out)
 }
-write.csv(rt_change, 'rate_change_all_May2019.csv')
+#write.csv(rt_change, 'rate_change_all_May2019.csv')
 
+rt_change2<-rt_change %>% 
+  group_by(site_project_comm)%>%
+  summarise(rate_change=mean(rate_change))
+hist(rt_change2$rate_change)
+
+
+####### Codyn Metrics
+#Richness and Evar
+spc<-unique(data$site_project_comm)
+RichEvar<-data.frame()
+
+for (i in 1:length(spc)){
+  
+  subset<-data%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-community_structure(subset, time.var = 'calendar_year', abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  RichEvar<-rbind(RichEvar, out)
+}
+
+hist(RichEvar$richness)
+hist(RichEvar$Evar)
+
+
+#diversity
+spc<-unique(data$site_project_comm)
+diversity<-data.frame()
+
+for (i in 1:length(spc)){
+  
+  subset<-data%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-community_diversity(subset, time.var = 'calendar_year', abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  diversity<-rbind(diversity, out)
+}
+
+hist(diversity$Shannon)
+
+#RAC_Change
+spc<-unique(data$site_project_comm)
+RACs<-data.frame()
+
+for (i in 1:length(spc)){
+  
+  subset<-data%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-RAC_change(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  RACs<-rbind(RACs, out)
+}
+
+hist(RACs$richness_change)
+hist(RACs$evenness_change)
+hist(RACs$rank_change)
+hist(RACs$gains)
+hist(RACs$losses)
+
+RACs2<-RACs %>% 
+  group_by(plot_id, site_project_comm)%>%
+  summarise(richness_change=mean(richness_change),
+            evenness_change=mean(evenness_change, rn.ma=T),
+            rank_change=mean(rank_change),
+            gains=mean(gains),
+            losses=mean(losses))
+
+hist(RACs2$richness_change)
+hist(RACs2$evenness_change)
+hist(RACs2$rank_change)
+hist(RACs2$gains)
+hist(RACs2$losses)
+
+
+
+###merge together at plot level alll metrics (RACs, cumsum, richeven?, diversity?)
+mult_change
+change_cumsum
+rt_change
+###merge together at site/exp level alll metrics
+mult_change2
+change_cumsum2
+rt_change2
