@@ -1,4 +1,5 @@
 library(tidyverse)
+library(vegan)
 library(codyn)
 
 
@@ -116,8 +117,9 @@ for (i in 1:length(spc)){
 hist(mult_change$composition_change)
 mult_change2<-mult_change %>% 
   group_by(site_project_comm)%>%
-  summarise(composition_change=mean(composition_change))
+  summarise(composition_change=mean(composition_change, na.rm=T), dispersion_change=mean(dispersion_change, na.rm=T))
 hist(mult_change2$composition_change)
+hist(mult_change2$dispersion_change)
 
 change_cumsum<-mult_change%>%
   group_by(site_project_comm)%>%
@@ -130,7 +132,7 @@ change_cumsum<-mult_change%>%
 hist(change_cumsum$cumsum)
 change_cumsum2<-change_cumsum %>% 
   group_by(site_project_comm)%>%
-  summarise(cumsum=mean(cumsum))
+  summarise(cumsum=mean(cumsum, na.rm=T))
 hist(change_cumsum2$cumsum)
 
 #write.csv(change_sumsum, 'Change_Cumsum_May2019.csv')
@@ -189,8 +191,19 @@ for (i in 1:length(spc)){
   RichEvar<-rbind(RichEvar, out)
 }
 
-hist(RichEvar$richness)
-hist(RichEvar$Evar)
+RichEvar2<-RichEvar %>% 
+  group_by(site_project_comm, plot_id) %>% 
+  summarise(richness=mean(richness),
+            Evar=mean(Evar, rn.ma=T))
+hist(RichEvar2$richness)
+hist(RichEvar2$Evar)
+
+RichEvar3<-RichEvar2 %>% 
+  group_by(site_project_comm) %>% 
+  summarise(richness=mean(richness),
+            Evar=mean(Evar, rn.ma=T))
+hist(RichEvar3$richness)
+hist(RichEvar3$Evar)
 
 
 #diversity
@@ -209,6 +222,18 @@ for (i in 1:length(spc)){
 }
 
 hist(diversity$Shannon)
+diversity2<-diversity %>% 
+  group_by(site_project_comm, plot_id) %>% 
+  summarise(Shannon=mean(Shannon, rn.ma=T))
+hist(diversity2$Shannon)
+
+
+diversity3<-diversity2 %>% 
+  group_by(site_project_comm) %>% 
+  summarise(Shannon=mean(Shannon))
+hist(diversity3$Shannon)
+
+
 
 #RAC_Change
 spc<-unique(data$site_project_comm)
@@ -234,24 +259,150 @@ hist(RACs$losses)
 RACs2<-RACs %>% 
   group_by(plot_id, site_project_comm)%>%
   summarise(richness_change=mean(richness_change),
-            evenness_change=mean(evenness_change, rn.ma=T),
+            evenness_change=mean(evenness_change, na.rm=T),
+            rank_change=mean(rank_change),
+            gains=mean(gains),
+            losses=mean(losses))
+RACs3<-RACs2 %>% 
+  group_by(site_project_comm) %>% 
+  summarise(richness_change=mean(richness_change),
+            evenness_change=mean(evenness_change, na.rm=T),
             rank_change=mean(rank_change),
             gains=mean(gains),
             losses=mean(losses))
 
-hist(RACs2$richness_change)
-hist(RACs2$evenness_change)
-hist(RACs2$rank_change)
-hist(RACs2$gains)
-hist(RACs2$losses)
+hist(RACs3$richness_change)
+hist(RACs3$evenness_change)
+hist(RACs3$rank_change)
+hist(RACs3$gains)
+hist(RACs3$losses)
+
+
+####calculate gamma diversity
+species <- data%>%
+  tbl_df()%>%
+  group_by(site_project_comm, calendar_year, plot_id, genus_species)%>%
+  summarise(relcov=mean(relcov))%>%
+  filter(genus_species!="")%>%
+  tbl_df()
+
+SampleIntensity<-species%>%
+  tbl_df()%>%
+  group_by(site_project_comm, plot_id, calendar_year)%>%
+  summarize(SampleIntensity=length(relcov))%>%
+  tbl_df()%>%
+  group_by(site_project_comm)%>%
+  summarize(SampleIntensity=length(SampleIntensity))%>%#how many plots were sampled over the course of the experiment
+  tbl_df()
+
+exp<-unique(SampleIntensity$site_project_comm)
+
+#create empty dataframe for loop
+estimatedRichness=data.frame(row.names=1)
+
+for(i in 1:length(exp)) {
+  #creates a dataset for each unique experiment
+  subset <- species%>%
+    filter(site_project_comm==exp[i])%>%
+    select(site_project_comm, plot_id, calendar_year, genus_species, relcov)
+  #transpose data into wide form
+  speciesData <- subset%>%
+    spread(genus_species, relcov, fill=0)
+  #calculate species accumulation curves
+  pool <- poolaccum(speciesData[,4:ncol(speciesData)], permutations=100)
+  chao <- as.data.frame(as.matrix(pool$chao))#this gives us estimated richness from 1-X samples
+  chao$aveChao<-rowMeans(chao)
+  chao$n<-row.names(chao)
+  chao$exp<-exp[i]
+  chao2<-chao%>%
+    select(exp,n, aveChao)
+  
+  #rbind back
+  estimatedRichness<-rbind(chao2, estimatedRichness)
+  
+}
 
 
 
-###merge together at plot level alll metrics (RACs, cumsum, richeven?, diversity?)
-mult_change
-change_cumsum
-rt_change
-###merge together at site/exp level alll metrics
-mult_change2
-change_cumsum2
-rt_change2
+ExpRichness<-estimatedRichness%>%
+  filter(n==30)%>%#the lowest sampling intensity -2
+  mutate(rrich=aveChao)%>%
+  select(-n, -aveChao) %>% 
+  rename(site_project_comm=exp)
+
+
+###merge together at site level alll metrics (RACs, cumsum, richeven?, diversity? - dont do richness, evenness and diversity because all plots are different sizes and comparing across sites means nothing, also leave out cumsum because it will be bigger for the longer datasets)
+
+SiteLevel<- mult_change2 %>% 
+  left_join(rt_change2) %>% 
+  left_join(RACs3)
+
+### import sitelevel data
+SiteInfo<-read.csv("datasets_used_May2019_withAddedSiteInfo.csv")%>%
+  left_join(ExpRichness)
+
+SiteLevelData<-SiteInfo %>% 
+  left_join((SiteLevel))
+
+
+####Regressions
+
+pairs(SiteLevelData[,c(2:12)])
+
+### make things in long form
+
+SiteLevelDataLong<-SiteLevelData %>% 
+  gather(metric, value, composition_change:losses)
+
+###ANPP
+rvalues <- SiteLevelDataLong %>%
+  group_by(metric) %>%
+  summarize(r.value = round((cor.test(ANPP, value)$estimate), digits=3),
+            p.value = (cor.test(ANPP, value)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+
+ggplot(data=SiteLevelDataLong, aes(x=ANPP, y=value))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(~metric, scales="free")+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+
+###MAP
+rvalues <- SiteLevelDataLong %>%
+  group_by(metric) %>%
+  summarize(r.value = round((cor.test(MAP, value)$estimate), digits=3),
+            p.value = (cor.test(MAP, value)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+
+ggplot(data=SiteLevelDataLong, aes(x=MAP, y=value))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(~metric, scales="free")+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+###MAT
+rvalues <- SiteLevelDataLong %>%
+  group_by(metric) %>%
+  summarize(r.value = round((cor.test(MAT, value)$estimate), digits=3),
+            p.value = (cor.test(MAT, value)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+
+ggplot(data=SiteLevelDataLong, aes(x=MAT, y=value))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(~metric, scales="free")+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+###rrich
+rvalues <- SiteLevelDataLong %>%
+  group_by(metric) %>%
+  summarize(r.value = round((cor.test(rrich, value)$estimate), digits=3),
+            p.value = (cor.test(rrich, value)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+
+ggplot(data=SiteLevelDataLong, aes(x=rrich, y=value))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(~metric, scales="free")+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
