@@ -142,7 +142,8 @@ cont_ave<-control_change %>%
 
 ###looking at C-T differences over time
 corredat_ct<-corredat2%>%
-  mutate(treatment2=as.character(treatment)) %>% 
+  mutate(treatment2=as.character(treatment)) 
+corredat_ct<-corredat_ct%>% 
   mutate(trt=ifelse(plot_mani==0, "C", corredat_ct$treatment2))
 
 spc<-unique(corredat_ct$site_project_comm)
