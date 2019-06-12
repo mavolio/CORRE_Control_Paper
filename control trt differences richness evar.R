@@ -7,6 +7,9 @@ theme_set(theme_bw(12))
 
 setwd("~/Dropbox/")
 
+setwd("C:\\Users\\megha\\Dropbox\\")
+
+
 corredat<-read.csv("converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_March2019.csv")%>%
   select(-X)
 
@@ -142,7 +145,8 @@ cont_ave<-control_change %>%
 
 ###looking at C-T differences over time
 corredat_ct<-corredat2%>%
-  mutate(treatment2=as.character(treatment)) %>% 
+  mutate(treatment2=as.character(treatment)) 
+corredat_ct<-corredat_ct%>% 
   mutate(trt=ifelse(plot_mani==0, "C", corredat_ct$treatment2))
 
 spc<-unique(corredat_ct$site_project_comm)
@@ -185,4 +189,14 @@ ggplot(data=ct_cont_compare, aes(x=gains, y=species_diff))+
 ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)
+
+
+#######doing the slope and mean differences for evenness and richness
+div_info2<-div_info%>% 
+  mutate(trt=ifelse(plot_mani==0, "C", div_info$treatment))
+
+means<-div_info2%>%
+  group_by(site_project_comm, trt)%>%
+  summarize(even=mean(Evar, na.rm = T),
+            rich = mean(richness))
 
