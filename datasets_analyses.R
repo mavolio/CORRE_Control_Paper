@@ -408,3 +408,4 @@ ggplot(data=SiteLevelDataLong, aes(x=rrich, y=value))+
   geom_smooth(method="lm")+
   facet_wrap(~metric, scales="free")+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
