@@ -1,4 +1,4 @@
-##richness changes through time
+##richness and evenness changes through time
 
 library(tidyverse)
 library(codyn)
@@ -58,7 +58,7 @@ corredat_raw<-rbind(corredat1, azi, jrn, knz, sak, cdr, edge)%>%
   mutate(spct=paste(site_project_comm, treatment, sep="::"))
 
 treatment_info<-read.csv("converge_diverge/datasets/LongForm/ExperimentInformation_March2019.csv")%>%
-  select(site_code, project_name, community_type, treatment,plot_mani, trt_type)%>%
+  select(site_code, project_name, community_type, treatment,plot_mani, trt_type, pulse)%>%
   unique()%>%
   #filter(plot_mani!=0)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
@@ -193,10 +193,84 @@ ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
 
 #######doing the slope and mean differences for evenness and richness
 div_info2<-div_info%>% 
-  mutate(trt=ifelse(plot_mani==0, "C", div_info$treatment))
+  mutate(trt=ifelse(plot_mani==0, "C", div_info$treatment))%>%
+  mutate(site_project_comm_trt=paste(site_project_comm, trt, sep="::"))
 
-means<-div_info2%>%
+##subset to experiments with 5 more years of collected data
+numyrs<-div_info2%>%
+  select(site_project_comm, treatment_year)%>%
+  unique()%>%
+  filter(treatment_year!=0)%>%
+  group_by(site_project_comm)%>%
+  summarise(nmyrs=length(treatment_year))%>%
+  filter(nmyrs>4)
+
+div_info3<-div_info2%>%
+  right_join(numyrs)
+
+means<-div_info3%>%
   group_by(site_project_comm, trt)%>%
   summarize(even=mean(Evar, na.rm = T),
             rich = mean(richness))
 
+cont_means<-means%>%
+  filter(trt=="C")%>%
+  rename(C_mean_rich=rich,
+         C_mean_even=even) %>% 
+  select(-trt)
+
+ctmeans<-means%>%
+  filter(trt!="C")%>%
+  rename(T_mean_rich=rich,
+         T_mean_even=even)%>%
+  left_join(cont_means)
+
+slopes<-data.frame()
+
+spc<-unique(div_info3$site_project_comm_trt)
+
+for (i in 1:length(spc)){
+  
+  subset<-div_info3%>%
+    filter(site_project_comm_trt==spc[i])
+  
+  rich.lm<-lm(richness~treatment_year, data=subset)
+  output.rich<-data.frame(site_project_comm_trt=unique(subset$site_project_comm_trt), 
+                        rich_est=summary(rich.lm)$coef["treatment_year", c("Estimate")])
+  
+  even.lm<-lm(Evar~treatment_year, data=subset)
+  output.even<-data.frame(site_project_comm_trt=unique(subset$site_project_comm_trt), 
+                         even_est=summary(even.lm)$coef["treatment_year", c("Estimate")])%>%
+    left_join(output.rich)
+  
+  slopes<-rbind(slopes, output.even)
+}
+
+slopes2<-slopes%>%
+  separate(site_project_comm_trt, into=c("site_project_comm","trt"), sep = "::")
+  
+
+cslopes<-slopes2%>%
+  filter(trt=="C")%>%
+  rename(C_slope_rich=rich_est, 
+         C_slope_even=even_est)%>%
+  select(-trt)
+
+CT_slopes<-slopes2%>%
+  filter(trt!="C")%>%
+  rename(T_slope_rich=rich_est, 
+         T_slope_even=even_est)%>%
+  left_join(cslopes)
+
+  ####merge to one
+
+treat_info<-treatment_info%>%
+  select(site_project_comm, use, trt_type, trt_type2, treatment, pulse)%>%
+  rename(trt=treatment)
+
+CT_all<-ctmeans%>%
+  left_join(CT_slopes)%>%
+  left_join(treat_info)
+
+write.csv(CT_all,"C2E/Products/Control Paper/Output/CT_compare_June2019.csv" )
+ 
