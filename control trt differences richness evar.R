@@ -273,4 +273,163 @@ CT_all<-ctmeans%>%
   left_join(treat_info)
 
 write.csv(CT_all,"C2E/Products/Control Paper/Output/CT_compare_June2019.csv" )
+
+
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+#reimport the data
+dat<-read.csv("C2E/Products/Control Paper/Output/CT_compare_June2019.csv")%>%
+  select(-X)%>%
+  filter(pulse==0)
+
+subset<-dat %>% 
+  filter(use==1)
+
+
+# Make all slope of control vs slope of treatment graphs
+####RICH
+#abs
+modrichabs <- lm(abs(dat$T_slope_rich)~abs(dat$C_slope_rich))
+summary(modrichabs)
+rsq<-summary(modrichabs)$r.squared
+pval<-summary(modrichabs)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+
+ggplot(data=dat, aes(x=abs(C_slope_rich), y=abs(T_slope_rich)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=0, y=3.65, hjust=0, label=lab, size=8, parse=TRUE)+
+  annotate("text", x=0, y=3.2, hjust=0, label=lab2, size=8, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of richness through time of control plots\n(absolute value)")+
+  scale_y_continuous(name="\nSlope of richness through time of treatment plots\n(absolute value)")
+
+#not abs
+modrich <- lm(dat$T_slope_rich~dat$C_slope_rich)
+summary(modrich)
+rsq<-summary(modrich)$r.squared
+pval<-summary(modrich)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+
+ggplot(data=dat, aes(x=(C_slope_rich), y=(T_slope_rich)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=-1.8, y=3.5, hjust=0, label=lab, size=7, parse=TRUE)+
+  annotate("text", x=-1.8, y=3, hjust=0, label=lab2, size=7, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of richness through time of control plots")+
+  scale_y_continuous(name="\nSlope of richness through time of treatment plots")
+
+####Diff Color line by trt
+modrichabs <- lm(abs(subset$T_slope_rich)~abs(subset$C_slope_rich))
+summary(modrichabs)
+rsq<-summary(modrichabs)$r.squared
+pval<-summary(modrichabs)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+
+ggplot(data=subset, aes(x=abs(C_slope_rich), y=abs(T_slope_rich)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F,  aes(color=trt_type2))+
+  annotate("text", x=0, y=3.65, hjust=0, label=lab, size=6, parse=TRUE)+
+  annotate("text", x=0, y=3.2, hjust=0, label=lab2, size=6, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of richness through time of control plots\n(absolute value)")+
+  scale_y_continuous(name="\nSlope of richness through time of treatment plots\n(absolute value)")
+
+
+modrich <- lm((subset$T_slope_rich)~(subset$C_slope_rich))
+summary(modrich)
+rsq<-summary(modrich)$r.squared
+pval<-summary(modrich)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+ggplot(data=subset, aes(x=(C_slope_rich), y=(T_slope_rich)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F, aes(color=trt_type2))+
+  annotate("text", x=-1.5, y=3.65, hjust=0, label=lab, size=8, parse=TRUE)+
+  annotate("text", x=-1.5, y=3.2, hjust=0, label=lab2, size=8, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of richness through time of control plots")+
+  scale_y_continuous(name="\nSlope of richness through time of treatment plots")
+
+
+
+####Evenness
+#abs
+modevenabs <- lm(abs(dat$T_slope_even)~abs(dat$C_slope_even))
+summary(modevenabs)
+rsq<-summary(modevenabs)$r.squared
+pval<-summary(modevenabs)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+
+ggplot(data=dat, aes(x=abs(C_slope_even), y=abs(T_slope_even)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=0, y=.05, hjust=0, label=lab, size=8, parse=TRUE)+
+  annotate("text", x=0, y=.045, hjust=0, label=lab2, size=8, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of evenness through time of control plots\n(absolute value)")+
+  scale_y_continuous(name="\nSlope of evenness through time of treatment plots\n(absolute value)")
+
+#not abs
+modeven <- lm(dat$T_slope_even~dat$C_slope_even)
+summary(modeven)
+rsq<-summary(modeven)$r.squared
+pval<-summary(modeven)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+
+ggplot(data=dat, aes(x=(C_slope_even), y=(T_slope_even)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=-.030, y=.03, hjust=0, label=lab, size=7, parse=TRUE)+
+  annotate("text", x=-.030, y=.02, hjust=0, label=lab2, size=7, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of evenness through time of control plots")+
+  scale_y_continuous(name="\nSlope of evenness through time of treatment plots")
+
+####Diff Color line by trt
+modevenabs <- lm(abs(subset$T_slope_even)~abs(subset$C_slope_even))
+summary(modevenabs)
+rsq<-summary(modevenabs)$r.squared
+pval<-summary(modevenabs)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+
+ggplot(data=subset, aes(x=abs(C_slope_even), y=abs(T_slope_even)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F,  aes(color=trt_type2))+
+  annotate("text", x=0, y=.05, hjust=0, label=lab, size=8, parse=TRUE)+
+  annotate("text", x=0, y=.045, hjust=0, label=lab2, size=8, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of evenness through time of control plots\n(absolute value)")+
+  scale_y_continuous(name="\nSlope of evenness through time of treatment plots\n(absolute value)")
+
+
+modeven <- lm((subset$T_slope_even)~(subset$C_slope_even))
+summary(modeven)
+rsq<-summary(modeven)$r.squared
+pval<-summary(modeven)$coefficients[2,4]
+lab<-paste("R^2 ==", round(rsq, 3))
+lab2<-paste("p < 0.001")
+ggplot(data=subset, aes(x=(C_slope_even), y=(T_slope_even)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F, aes(color=trt_type2))+
+  annotate("text", x=-.030, y=.03, hjust=0, label=lab, size=7, parse=TRUE)+
+  annotate("text", x=-.030, y=.02, hjust=0, label=lab2, size=7, parse=TRUE)+
+  scale_x_continuous(name="\nSlope of evenness through time of control plots")+
+  scale_y_continuous(name="\nSlope of evenness through time of treatment plots")
+
+
+
+#Make time ambient would take to equal treatment effect
+dat2<-dat %>% 
+  mutate(AtoTRich=(T_mean_rich-C_mean_rich)/C_slope_rich) %>% 
+  mutate(AtoTEven=(T_mean_even-C_mean_even)/C_slope_even) %>%
+  mutate(AttToTrtRich=T_slope_rich-C_slope_rich)%>%
+  mutate(AttToTrtEven=T_slope_even-C_slope_even)
+
+
+
+
  
