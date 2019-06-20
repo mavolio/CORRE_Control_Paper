@@ -2,7 +2,7 @@
 
 library(tidyverse)
 library(codyn)
-
+library(ggplot2)
 theme_set(theme_bw(12))
 
 setwd("~/Dropbox/")
@@ -424,12 +424,27 @@ ggplot(data=subset, aes(x=(C_slope_even), y=(T_slope_even)))+
 
 #Make time ambient would take to equal treatment effect
 dat2<-dat %>% 
-  mutate(AtoTRich=(T_mean_rich-C_mean_rich)/C_slope_rich) %>% 
-  mutate(AtoTEven=(T_mean_even-C_mean_even)/C_slope_even) %>%
+  mutate(AtoTRich=abs((T_mean_rich-C_mean_rich)/C_slope_rich)) %>% 
+  mutate(AtoTEven=abs((T_mean_even-C_mean_even)/C_slope_even)) %>%
   mutate(AttToTrtRich=T_slope_rich-C_slope_rich)%>%
   mutate(AttToTrtEven=T_slope_even-C_slope_even)
 
+subset<-dat2 %>% 
+  filter(use==1) %>% 
+  filter(AtoTRich<100) %>% 
+  filter(AtoTEven<100) %>% 
+  select(site_project_comm, trt_type2, AtoTRich, AtoTEven, 
+         AttToTrtRich, AttToTrtEven) %>% 
+  gather(type, value,AtoTRich:AttToTrtEven)%>%
+  group_by(trt_type2, type) %>% 
+  summarise(mean_value=mean(value), sd_value=sd(value))%>%
+  mutate(se_value=sd_value/sqrt(10))
 
-
+ggplot(data=subset, aes(x=trt_type2, y=mean_value))+
+  geom_bar(stat="identity", position=position_dodge())+
+  facet_wrap(~type, scales="free")+
+  geom_errorbar(aes(ymin=mean_value-se_value, ymax=mean_value+se_value), position = position_dodge(0.9), width=0.2)
+  xlab("")+
+  ylab("2001 Biomass (g)")
 
  
