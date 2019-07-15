@@ -72,9 +72,23 @@ codyndat_clean<-merge(codyndat, splist, by=c("site_code","project_name","communi
 
 codyndat_subset<-codyndat_clean%>%
   filter(dataset_length>7, broad_ecosystem_type=="herbaceous", taxa=="plants", succession=="no")%>%
-  select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
+  select(site_project_comm, calendar_year, genus_species, relcov, plot_id)%>%
+  filter(site_project_comm!="BUX_PQ_0")%>%
+  filter(site_project_comm!="CDR_e001_A")%>%
+  filter(site_project_comm!="CDR_e001_B")%>%
+  filter(site_project_comm!="CDR_e001_C")%>%
+  filter(site_project_comm!="CDR_e001_D")%>%
+  filter(site_project_comm!="JSP_GCE_0")%>%
+  filter(site_project_comm!="KNZ_IRG_l")%>%
+  filter(site_project_comm!="KNZ_IRG_u")%>%
+  filter(site_project_comm!="KNZ_pplots_0")%>%
+  filter(site_project_comm!="KNZ_RaMPs_0")%>%
+  filter(site_project_comm!="maerc_fireplots_0")%>%
+  filter(site_project_comm!="NWT_bowman_DryBowman")%>%
+  filter(site_project_comm!="PIE_TIDE_0")%>%
+  filter(site_project_comm!="SEV_Nfert_0")
 
-
+         
 unique(codyndat_subset$site_project_comm)
 
 
@@ -121,6 +135,13 @@ mult_change2<-mult_change %>%
   summarise(composition_change=mean(composition_change, na.rm=T), dispersion_change=mean(dispersion_change, na.rm=T))
 hist(mult_change2$composition_change)
 hist(mult_change2$dispersion_change)
+
+mult_change3<-mult_change2 %>% 
+  gather(metric, value, composition_change:dispersion_change)
+
+ggplot(data=mult_change3, aes(x=value, fill=metric))+
+  geom_histogram(bins= 7)+
+  facet_wrap(~metric, scales="free")
 
 change_cumsum<-mult_change%>%
   group_by(site_project_comm)%>%
@@ -175,6 +196,8 @@ rt_change2<-rt_change %>%
   summarise(rate_change=mean(rate_change))
 hist(rt_change2$rate_change)
 
+ggplot(data=rt_change2, aes(x=rate_change))+
+  geom_histogram(bins= 10)
 
 ####### Codyn Metrics
 #Richness and Evar
@@ -277,6 +300,14 @@ hist(RACs3$evenness_change)
 hist(RACs3$rank_change)
 hist(RACs3$gains)
 hist(RACs3$losses)
+
+#make RACs3 long
+RACs4<-RACs3 %>% 
+  gather(metric, value, richness_change:losses)
+
+ggplot(data=RACs4, aes(x=value, fill=metric))+
+  geom_histogram(bins= 8)+
+  facet_wrap(~metric, scales="free")
 
 
 ####calculate gamma diversity

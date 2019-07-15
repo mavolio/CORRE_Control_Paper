@@ -444,7 +444,23 @@ ggplot(data=subset, aes(x=trt_type2, y=mean_value))+
   geom_bar(stat="identity", position=position_dodge())+
   facet_wrap(~type, scales="free")+
   geom_errorbar(aes(ymin=mean_value-se_value, ymax=mean_value+se_value), position = position_dodge(0.9), width=0.2)
-  xlab("")+
-  ylab("2001 Biomass (g)")
 
- 
+
+  
+###question 2B  
+  ### how do things vary by site level characteristics? CANNOT do until I get data that gives the ANPP, ect, Site Info
+subset2<-subset %>% 
+  mutate(TrtEffect=T_slope_rich-C_slope_rich)%>% 
+  mutate(TimeCatch=abs(C_mean_rich-T_mean_rich)/C_slope_rich)
+
+rvalues <- subset2 %>%
+  summarize(r.value = round((cor.test(ANPP, TrtEffect)$estimate), digits=3),
+            p.value = (cor.test(ANPP, TrtEffect)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+
+ggplot(data=SiteLevelDataLong, aes(x=ANPP, y=value))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(~metric, scales="free")+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
