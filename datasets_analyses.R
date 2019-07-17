@@ -2,6 +2,7 @@ library(tidyverse)
 library(vegan)
 library(codyn)
 library(PerformanceAnalytics)
+library(data.table)
 
 
 ## Sally's desktop
@@ -128,20 +129,35 @@ for (i in 1:length(spc)){
   mult_change<-rbind(mult_change, out)
 }
 #write.csv(mult_change, 'Comm_change_all_May2019.csv')
-
+###to get each year
 hist(mult_change$composition_change)
-mult_change2<-mult_change %>% 
+#subset to get only 7 points per year
+subset<-mult_change%>%
   group_by(site_project_comm)%>%
-  summarise(composition_change=mean(composition_change, na.rm=T), dispersion_change=mean(dispersion_change, na.rm=T))
-hist(mult_change2$composition_change)
-hist(mult_change2$dispersion_change)
+  sample_n(7)
+hist(subset$composition_change)
+hist(subset$dispersion_change)
 
-mult_change3<-mult_change2 %>% 
+subset_mult2<-subset_mult %>% 
   gather(metric, value, composition_change:dispersion_change)
 
-ggplot(data=mult_change3, aes(x=value, fill=metric))+
-  geom_histogram(bins= 7)+
-  facet_wrap(~metric, scales="free")
+#ggplot(data=subset2, aes(x=value, fill=metric))+
+#  geom_histogram(bins= 15)+
+#  geom_vline(aes(xintercept=mean(value, na.rm=T), colour=metric),   
+#             color="red", linetype="dashed", size=1)+
+#  facet_wrap(~metric, scales="free")
+
+###to get each year average across years
+subset_mult3<-subset_mult2 %>% 
+  group_by(site_project_comm, metric)%>%
+  summarise(meanvalue=mean(value, na.rm=T))
+#hist(mult_change2$composition_change)
+#hist(mult_change2$dispersion_change)
+
+#ggplot(data=mult_change3, aes(x=value, fill=metric))+
+#  geom_histogram(bins= 7)+
+#  facet_wrap(~metric, scales="free")
+
 
 change_cumsum<-mult_change%>%
   group_by(site_project_comm)%>%

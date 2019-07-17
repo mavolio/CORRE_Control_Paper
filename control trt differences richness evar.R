@@ -115,13 +115,37 @@ ggplot(data=subset(div_info, site_project_comm=="SERC_CXN_0"), aes(x=treatment_y
   geom_point()+
   geom_smooth(method="lm", se=F)
 
+###getting metrics for change in both control and trt plots.
+corredat2<-corredat_raw%>%
+  left_join(treatment_info)
+
+spc<-unique(corredat2$site_project_comm)
+change<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-corredat2%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-RAC_change(subset, time.var = 'treatment_year', species.var="genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  change<-rbind(change, out)
+}
+
+cont_ave<-control_change %>% 
+  group_by(site_project_comm, plot_id)%>%
+  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
+  ungroup() %>% 
+  group_by(site_project_comm) %>% 
+  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)
+
 
 ###comparing change in controls over time versus C-T differences over time.
 corredat2<-corredat_raw%>%
   left_join(treatment_info)
 
-controls<-corredat2%>%
-  filter(plot_mani==0)
+controls<-corredat2
+  #filter(plot_mani==0)
 
 spc<-unique(controls$site_project_comm)
 control_change<-data.frame()
