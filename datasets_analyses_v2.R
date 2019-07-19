@@ -3,6 +3,7 @@ library(vegan)
 library(codyn)
 library(PerformanceAnalytics)
 library(data.table)
+library(broom)
 
 
 ## Sally's desktop
@@ -502,7 +503,10 @@ chart.Correlation(SiteLevelData[,2:13], histogram=TRUE, method="Pearson")
 #Regressions
 YearlyLevelDataLong<-YearlyLevelData %>% 
   select(-calendar_year, -calendar_year2)%>%
-  gather(metric, value, richness_change:dispersion_change)
+  gather(metric, value, richness_change:dispersion_change) %>% 
+  group_by(site_project_comm, ANPP, MAP, MAT, rrich, metric) %>% 
+  summarise_at(vars(value), list(mean), na.rm=T) %>% 
+  ungroup()
 YearlyLevelDataLong<-as_tibble(YearlyLevelDataLong)
 Regressions<-YearlyLevelDataLong %>% 
   nest(-metric) %>% 

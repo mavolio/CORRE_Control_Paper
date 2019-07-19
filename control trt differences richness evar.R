@@ -1,9 +1,13 @@
 ##richness and evenness changes through time
 
-library(tidyverse)
+
 library(codyn)
 library(ggplot2)
 theme_set(theme_bw(12))
+library(devtools)
+install_github("NCEAS/codyn", ref = "sp_diff_test")
+library(tidyverse)
+library(broom)
 
 setwd("~/Dropbox/")
 
@@ -132,7 +136,7 @@ for (i in 1:length(spc)){
   change<-rbind(change, out)
 }
 
-cont_ave<-control_change %>% 
+ave<-change %>% 
   group_by(site_project_comm, plot_id)%>%
   summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
   ungroup() %>% 
@@ -144,8 +148,8 @@ cont_ave<-control_change %>%
 corredat2<-corredat_raw%>%
   left_join(treatment_info)
 
-controls<-corredat2
-  #filter(plot_mani==0)
+controls<-corredat2%>%
+  filter(plot_mani==0)
 
 spc<-unique(controls$site_project_comm)
 control_change<-data.frame()
@@ -213,6 +217,327 @@ ggplot(data=ct_cont_compare, aes(x=gains, y=species_diff))+
 ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)
+
+
+
+
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+##################Control_Change vs Difference using 4 yrs only######################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#### drop sites with less than 5 years
+datasetlength<-corredat_ct%>%
+  select(site_project_comm, treatment_year)%>%
+  unique()%>%
+  group_by(site_project_comm)%>%
+  summarise(length=n())%>%
+  filter(length>5)%>%
+  select(-length)
+
+corredat_ct2<-corredat_ct%>%
+  right_join(datasetlength)%>%
+  filter(treatment_year!=0)
+
+###get mult_change
+#####look at mult change
+corredat_ct3<-corredat_ct2 %>% 
+  filter(plot_mani==0) 
+
+spc<-unique(corredat_ct3$spct)
+mult_change<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-corredat_ct3%>%
+    filter(spct==spc[i])
+  
+  out<-multivariate_change(subset, time.var = 'treatment_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$spct<-spc[i]
+  
+  mult_change<-rbind(mult_change, out)
+}
+
+
+#####look at mult difference (need a double loop)
+spc<-unique(corredat_ct2$site_project_comm)
+diff_mult<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-corredat_ct2%>%
+    filter(site_project_comm==spc[i])
+  
+  ref_trt <- unique(subset(subset, plot_mani==0)$trt)
+  
+  out<-multivariate_difference(subset, time.var = 'treatment_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = "trt", reference.treatment = ref_trt)
+  
+  out$site_project_comm<-spc[i]
+  
+  diff_mult<-rbind(diff_mult, out)
+}
+
+diff_mult2<-diff_mult %>% 
+  rename(treatment_year2=treatment_year)
+mult_change2<-mult_change %>% 
+  separate(spct, into=c("site_project_comm", "treatment"), sep="::") %>% 
+  select(-treatment, -treatment_year)
+
+multivariate<-mult_change2 %>% 
+  right_join(diff_mult2) 
+
+
+###use ct_diff
+###use control_change, but average across plots
+control_change2<-control_change %>% 
+  group_by(site_project_comm, treatment_year, treatment_year2)%>%
+  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
+  ungroup() 
+
+RACs<-control_change2 %>% 
+  right_join(ct_diff) %>% 
+  right_join(datasetlength)
+
+
+#####Merger RACs with Mult and drop all but four timepoints for all
+Metrics<-RACs%>%
+  right_join(multivariate)%>%
+  filter(treatment_year!="NA")%>%
+  filter(treatment_year!=0) %>% 
+  group_by(site_project_comm, trt, trt2)%>%
+  sample_n(4) 
+  
+#### Metrics" IS THE DATA TO USE - Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
+write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv" , row.names=F)
+
+#####################################################################################
+##################START HERE NOW THAT THINGS ARE CALCULATED##########################
+###################Control_Change vs Difference using 4 yrs only######################
+#####################################################################################
+
+metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv")
+
+subset_GCDs<-metrics2 %>% 
+  group_by(site_project_comm,trt2)%>%
+  summarise(richness_change=mean(richness_change, na.rm=T),
+            richness_diff=mean(richness_diff, na.rm=T),
+            evenness_change=mean(evenness_change, na.rm=T),
+            evenness_diff=mean(evenness_diff, na.rm=T),
+            rank_change=mean(rank_change, na.rm=T),
+            rank_diff=mean(rank_diff, na.rm=T),
+            gains=mean(gains, na.rm=T),
+            losses=mean(losses, na.rm=T),
+            species_diff=mean(species_diff, na.rm=T),
+            composition_change=mean(composition_change, na.rm=T),
+            composition_diff=mean(composition_diff, na.rm=T),
+            dispersion_change=mean(dispersion_change, na.rm=T),
+            abs_dispersion_diff=mean(abs_dispersion_diff, na.rm=T))%>%
+  ungroup()
+
+### get only GCD plots
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(composition_change, composition_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(dispersion_change, abs_dispersion_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(dispersion_change, abs_dispersion_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
+  geom_point()+
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(richness_change, richness_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(richness_change, richness_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
+  geom_point()+
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(evenness_change), abs(evenness_diff))$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
+  geom_point()+
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(rank_change, rank_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(gains, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(gains, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(losses, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(losses, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+
+
+library(grid)
+pushViewport(viewport(layout=grid.layout(2,4)))
+print(CvCT, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(A, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(B, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(C, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(D, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
+print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
+print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
+
+modA<- lm(data=metrics3, composition_diff~composition_change)
+summary(modA)
+modB<- lm(data=metrics3, abs_dispersion_diff~dispersion_change)
+summary(modB)
+modC<- lm(data=metrics3, abs(richness_diff)~abs(richness_change))
+summary(modC)
+modD<- lm(data=metrics3, abs(evenness_diff)~abs(evenness_change))
+summary(modD)
+modE<- lm(data=metrics3, rank_diff~rank_change)
+summary(modE)
+modF<- lm(data=metrics3, species_diff~gains)
+summary(modG)
+modF<- lm(data=metrics3, species_diff~losses)
+summary(modG)
+
+
+
+### get only GCD plots and remove Temp
+
+subset_GCDs<-metrics3 %>%
+  rename(treatment=trt2) %>% 
+  left_join(treatment_info)%>%
+  filter(use==1)%>%
+  filter(trt_type2!="Temperature")
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(composition_change, composition_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+A<-ggplot(data=subset_GCDs, aes(x=composition_change, y=composition_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(dispersion_change, abs_dispersion_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(dispersion_change, abs_dispersion_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+B<-ggplot(data=subset_GCDs, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(richness_change, richness_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(richness_change, richness_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+C<-ggplot(data=subset_GCDs, aes(x=abs(richness_change), y=abs(richness_diff)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(evenness_change), abs(evenness_diff))$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+D<-ggplot(data=subset_GCDs, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(rank_change, rank_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+E<-ggplot(data=subset_GCDs, aes(x=rank_change, y=rank_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(gains, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(gains, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+G<-ggplot(data=subset_GCDs, aes(x=gains, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- subset_GCDs %>%
+  summarize(r.value = round((cor.test(losses, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(losses, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+H<-ggplot(data=subset_GCDs, aes(x=losses, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+
+
+library(grid)
+pushViewport(viewport(layout=grid.layout(2,4)))
+print(CvCT, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(A, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(B, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(C, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(D, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
+print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
+print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
+
+
+
+####################################################################################
+#######################Restart here - this is something new)#########################
+####################################################################################
+
+
+
 
 
 #######doing the slope and mean differences for evenness and richness
