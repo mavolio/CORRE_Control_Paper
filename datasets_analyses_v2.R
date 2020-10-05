@@ -11,11 +11,14 @@ setwd("~/Dropbox/C2E/Products/Control Paper")
 
 
 ###reading in and cleaning corre data
-corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_March2019.csv")%>%
+####sk changed this to be in old files folder on July 2020 becuase wants code to run, but do we need to updat to new version?
+corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/old files - no longer necessary/SpeciesRelativeAbundance_March2019.csv")%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")%>%
   select(site_code, project_name, community_type, calendar_year, genus_species, relcov, treatment, plot_id, site_project_comm)
+
+
 
 corredat_info<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/ExperimentInformation_March2019.csv")%>%
   select(-X)%>%
@@ -319,7 +322,9 @@ print(Gains, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 
 
-####graphs by site (avereaged yearly numbers together)
+####graphs by experiment (avereaged yearly numbers together) --- need to get range into figure in upper right corner - wont work 
+range<-paste("-1 to 1")
+
 CompChange<-ggplot(data=MeanMetrics_subset, aes(x=composition_change))+
   geom_density(aes(y=.05 * ..count..), alpha=1, fill="grey")+
   geom_histogram(binwidth= .05, fill="white", colour="black", aes(alpha=.5))+
@@ -328,9 +333,10 @@ CompChange<-ggplot(data=MeanMetrics_subset, aes(x=composition_change))+
   geom_vline(aes(xintercept=median(composition_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Compositional Change")+
-  scale_y_continuous(name="Count")+
+  scale_y_continuous(breaks=c(0, 5, 10 , 15), name="Count")+
   theme(legend.position = "none")
-
+  #annotate("text", x=Inf, y=Inf, hjust=0, label=range, size=8, parse=TRUE)
+  #geom_text("-1 to +1", mapping=aes(x=Inf, y = Inf), hjust=1.05, vjust=1.5)
 Disp<-ggplot(data=MeanMetrics_subset, aes(x=dispersion_change))+
   geom_density(aes(y=.005 * ..count..), alpha=1, fill="grey")+
   geom_histogram(binwidth= .005, fill="white", colour="black", aes(alpha=.5))+
@@ -372,7 +378,7 @@ Rank<-ggplot(data=MeanMetrics_subset, aes(x=rank_change))+
   geom_vline(aes(xintercept=median(rank_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Rank Change")+
-  scale_y_continuous(name="Count")+
+  scale_y_continuous(breaks=c(0, 5, 10 , 15), name="Count")+
   theme(legend.position = "none")
 
 Gains<-ggplot(data=MeanMetrics_subset, aes(x=gains))+
@@ -400,12 +406,12 @@ Losses<-ggplot(data=MeanMetrics_subset, aes(x=losses))+
 
 
 library(grid)
-pushViewport(viewport(layout=grid.layout(4,4)))
+pushViewport(viewport(layout=grid.layout(2,3)))
 print(CompChange, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(Disp, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
-print(Even, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
-print(Rank, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
-print(Rich, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(Even, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(Rank, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(Rich, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
 print(Gains, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 
@@ -497,8 +503,16 @@ YearlyLevelData<-SiteInfo %>%
 
 
 ####Correlations
-pairs(SiteLevelData[,c(2:13)])
-chart.Correlation(SiteLevelData[,2:13], histogram=TRUE, method="Pearson")
+pairs(YearlyLevelData[,c(2:12)])
+chart.Correlation(YearlyLevelData[,2:12], histogram=TRUE, method="Pearson")
+
+###CompChange test, trying to figure out why tibble method give df 2, 31 instead of 1, 32 - but you need to run the next set of code before you do the test to get it by 1 # pert site
+YearlyLevelDataLong_ANPP<-YearlyLevelDataLong %>% 
+  filter(metric=="composition_change") %>% 
+  filter(ANPP!="NA")
+CompANPP<-lm(value~ANPP, data=YearlyLevelDataLong_ANPP)
+summary(CompANPP)
+### numbers are the same as below, not sure why df is 2, the above way reports 1
 
 #Regressions
 YearlyLevelDataLong<-YearlyLevelData %>% 
@@ -528,7 +542,7 @@ ANPP_P<-as.data.frame(Regressions %>%
 ANPP_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 
-write.csv(ANPP_RegStats, file="ANPP_RegStats.csv", row.names=F)
+write.csv(ANPP_RegStats, file="ANPP_RegStats_5Oct2020.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$ANPP)
 summary(a)
@@ -554,7 +568,7 @@ ANPP_P<-as.data.frame(Regressions %>%
 MAP_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 
-write.csv(MAP_RegStats, file="MAP_RegStats.csv", row.names=F)
+write.csv(MAP_RegStats, file="MAP_RegStats_5Oct2020.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
 summary(a)
@@ -580,7 +594,7 @@ ANPP_P<-as.data.frame(Regressions %>%
 MAT_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 
-write.csv(MAT_RegStats, file="MAT_RegStats.csv", row.names=F)
+write.csv(MAT_RegStats, file="MAT_RegStats_5Oct2020.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
 summary(a)
@@ -605,7 +619,7 @@ ANPP_P<-as.data.frame(Regressions %>%
 RRich_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 
-write.csv(RRich_RegStats, file="RRich_RegStats.csv", row.names=F)
+write.csv(RRich_RegStats, file="RRich_RegStats_5Oct2020.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$rrich)
 summary(a)
@@ -613,9 +627,7 @@ summary(a)
 ####FIGURES WHICH WE ARE NOT using
 ### make things in long form
 
-SiteLevelDataLong<-SiteLevelData %>% 
-  gather(metric, value, composition_change:losses)
-
+SiteLevelDataLong<-YearlyLevelDataLong
 ###ANPP
 rvalues <- SiteLevelDataLong %>%
   group_by(metric) %>%
