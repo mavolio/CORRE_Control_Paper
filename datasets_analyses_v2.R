@@ -5,6 +5,7 @@ library(PerformanceAnalytics)
 library(data.table)
 library(broom)
 
+set.seed(12)
 
 ## Sally's desktop
 setwd("~/Dropbox/C2E/Products/Control Paper")
@@ -215,11 +216,17 @@ RACs2<-RACs %>%
             gains=mean(gains),
             losses=mean(losses))
 
-
-YearlyMetrics_subset<- RACs2 %>% 
+RACs_subset<- RACs2 %>% 
   left_join(mult_change) %>% 
   group_by(site_project_comm)%>%
   sample_n(7)
+#write.csv(RACs_subset, file="Control_RACs_subsetDownTo7_toUSE_5Oct2020.csv", row.names=F)
+
+
+#######START HERE - was having trouble, stats changed every time because it was a random subset of 7 each time
+ToUse<-read.csv("Control_RACs_subsetDownTo7_toUSE_5Oct2020.csv")
+
+YearlyMetrics_subset<- ToUse 
 
 MeanMetrics_subset<-YearlyMetrics_subset %>% 
   group_by(site_project_comm) %>% 
@@ -312,7 +319,7 @@ Losses<-ggplot(data=YearlyMetrics_subset, aes(x=losses))+
 
 
 library(grid)
-pushViewport(viewport(layout=grid.layout(4,4)))
+pushViewport(viewport(layout=grid.layout(2,4)))
 print(CompChange, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(Disp, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
 print(Even, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
@@ -406,12 +413,12 @@ Losses<-ggplot(data=MeanMetrics_subset, aes(x=losses))+
 
 
 library(grid)
-pushViewport(viewport(layout=grid.layout(2,3)))
+pushViewport(viewport(layout=grid.layout(2,4)))
 print(CompChange, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(Disp, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
-print(Even, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(Even, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
 print(Rank, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
-print(Rich, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(Rich, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
 print(Gains, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 
@@ -501,17 +508,18 @@ SiteInfo<-read.csv("datasets_used_May2019_withAddedSiteInfo.csv")%>%
 YearlyLevelData<-SiteInfo %>% 
   left_join((YearlyMetrics_subset))
 
+unique(YearlyLevelData$site_project_comm)
+
 
 ####Correlations
 pairs(YearlyLevelData[,c(2:12)])
 chart.Correlation(YearlyLevelData[,2:12], histogram=TRUE, method="Pearson")
 
 ###CompChange test, trying to figure out why tibble method give df 2, 31 instead of 1, 32 - but you need to run the next set of code before you do the test to get it by 1 # pert site
-YearlyLevelDataLong_ANPP<-YearlyLevelDataLong %>% 
-  filter(metric=="composition_change") %>% 
-  filter(ANPP!="NA")
-CompANPP<-lm(value~ANPP, data=YearlyLevelDataLong_ANPP)
-summary(CompANPP)
+YearlyLevelDataLong_MAP<-YearlyLevelDataLong %>% 
+  filter(metric=="composition_change")
+CompMAP<-lm(value~MAP, data=YearlyLevelDataLong_MAP)
+summary(CompMAP)
 ### numbers are the same as below, not sure why df is 2, the above way reports 1
 
 #Regressions
@@ -521,6 +529,7 @@ YearlyLevelDataLong<-YearlyLevelData %>%
   group_by(site_project_comm, ANPP, MAP, MAT, rrich, metric) %>% 
   summarise_at(vars(value), list(mean), na.rm=T) %>% 
   ungroup()
+unique(YearlyLevelDataLong$site_project_comm)
 YearlyLevelDataLong<-as_tibble(YearlyLevelDataLong)
 Regressions<-YearlyLevelDataLong %>% 
   nest(-metric) %>% 
