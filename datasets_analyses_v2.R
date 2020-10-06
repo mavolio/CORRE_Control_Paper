@@ -5,8 +5,6 @@ library(PerformanceAnalytics)
 library(data.table)
 library(broom)
 
-set.seed(12)
-
 ## Sally's desktop
 setwd("~/Dropbox/C2E/Products/Control Paper")
 
