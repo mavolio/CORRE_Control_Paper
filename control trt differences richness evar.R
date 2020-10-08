@@ -3,12 +3,13 @@
 
 library(codyn)
 library(ggplot2)
-theme_set(theme_bw(12))
+theme_set(theme_bw(12))+
+  theme_update(panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 library(devtools)
-install_github("NCEAS/codyn", ref = "sp_diff_test")
+#install_github("NCEAS/codyn", ref = "sp_diff_test")
 library(tidyverse)
 library(broom)
-
+library(codyn)
 setwd("~/Dropbox/")
 
 setwd("C:\\Users\\megha\\Dropbox\\")
@@ -309,7 +310,7 @@ Metrics<-RACs%>%
   sample_n(4) 
   
 #### Metrics" IS THE DATA TO USE - Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
-write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv" , row.names=F)
+#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv" , row.names=F)
 
 #####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
@@ -318,7 +319,11 @@ write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timep
 
 metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv")
 
-subset_GCDs<-metrics2 %>% 
+###list
+list<-  as.data.frame(unique(metrics2$site_project_comm))
+write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_Oct2020_5ormoreyrs.csv")
+
+metrics3<-metrics2 %>% 
   group_by(site_project_comm,trt2)%>%
   summarise(richness_change=mean(richness_change, na.rm=T),
             richness_diff=mean(richness_diff, na.rm=T),
@@ -346,11 +351,12 @@ A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+A
 
 rvalues <- metrics3 %>%
-  summarize(r.value = round((cor.test(dispersion_change, abs_dispersion_diff)$estimate),
+  summarize(r.value = round((cor.test(abs(dispersion_change), abs_dispersion_diff)$estimate),
                             digits=3), 
-            p.value = (cor.test(dispersion_change, abs_dispersion_diff)$p.value))%>%
+            p.value = (cor.test(abs(dispersion_change), abs_dispersion_diff)$p.value))%>%
   mutate(sig=ifelse(p.value<0.05, 1, 0))
 B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_point()+
@@ -358,9 +364,9 @@ B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
-  summarize(r.value = round((cor.test(richness_change, richness_diff)$estimate),
+  summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
                             digits=3), 
-            p.value = (cor.test(richness_change, richness_diff)$p.value))%>%
+            p.value = (cor.test(abs(richness_change), abs(richness_diff))$p.value))%>%
   mutate(sig=ifelse(p.value<0.05, 1, 0))
 C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
   geom_point()+
@@ -423,7 +429,7 @@ print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
 
 modA<- lm(data=metrics3, composition_diff~composition_change)
 summary(modA)
-modB<- lm(data=metrics3, abs_dispersion_diff~dispersion_change)
+modB<- lm(data=metrics3, abs_dispersion_diff~abs(dispersion_change))
 summary(modB)
 modC<- lm(data=metrics3, abs(richness_diff)~abs(richness_change))
 summary(modC)
@@ -432,12 +438,71 @@ summary(modD)
 modE<- lm(data=metrics3, rank_diff~rank_change)
 summary(modE)
 modF<- lm(data=metrics3, species_diff~gains)
+summary(modF)
+modG<- lm(data=metrics3, species_diff~losses)
 summary(modG)
-modF<- lm(data=metrics3, species_diff~losses)
-summary(modG)
 
 
 
+#### Regraphing only certain panels for ESA 2020
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(composition_change, composition_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+lab1<-paste("~r^2==~",rvalues$r.value)
+ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+ # geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  annotate("text", x=Inf, y = Inf, label = lab1, parse=TRUE, hjust=1.05, vjust=1.5)+
+  scale_x_continuous(name="Compositional Change through Time")+
+  scale_y_continuous(name="Compositional Difference due to GCDs")
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(rank_change, rank_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+lab1<-paste("~r^2==~",rvalues$r.value)
+E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=-Inf, y = Inf, label = lab1, parse=TRUE, hjust=0, vjust=1.5)+
+  scale_x_continuous(name="Rank Change through Time")+
+  scale_y_continuous(name="Rank Difference \ndue to GCDs")
+E
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(gains, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(gains, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+lab1<-paste("~r^2==~",rvalues$r.value)
+G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=-Inf, y = Inf, label = lab1, parse=TRUE, hjust=0, vjust=1.5)+
+  scale_x_continuous(name="Species Gains through Time")+
+  scale_y_continuous(name="Species Difference \ndue to GCDs")
+G
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(losses, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(losses, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))
+lab1<-paste("~r^2==~",rvalues$r.value)
+H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  annotate("text", x=-Inf, y = Inf, label = lab1, parse=TRUE, hjust=0, vjust=1.5)+
+  scale_x_continuous(name="Species Losses through Time")+
+  scale_y_continuous(name="Species Difference \ndue to GCDs")
+H
+library(grid)
+pushViewport(viewport(layout=grid.layout(3,1)))
+print(E, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(H, vp=viewport(layout.pos.row = 3, layout.pos.col = 1))
 ### get only GCD plots and remove Temp
 
 subset_GCDs<-metrics3 %>%
@@ -455,7 +520,7 @@ A<-ggplot(data=subset_GCDs, aes(x=composition_change, y=composition_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
-
+A
 rvalues <- subset_GCDs %>%
   summarize(r.value = round((cor.test(dispersion_change, abs_dispersion_diff)$estimate),
                             digits=3), 

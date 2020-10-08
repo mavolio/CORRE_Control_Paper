@@ -13,7 +13,7 @@ library(codyn)
 
 setwd("~/Dropbox/")
 
-setwd("C:\\Users\\megha\\Dropbox\\")
+#setwd("C:\\Users\\megha\\Dropbox\\")
 
 
 ####sk changed this to be in old files folder on July 2020 becuase wants code to run, but do we need to updat to new version?
@@ -228,7 +228,7 @@ ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
 #####################################################################################
 #####################################################################################
 #####################################################################################
-##################Control_Change vs Difference using 4 yrs only######################
+##################Control_Change vs Difference sites with 8 or more years of trt and averageing across the first 8 years only                       ######################
 #####################################################################################
 #####################################################################################
 #####################################################################################
@@ -236,14 +236,18 @@ ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
 datasetlength<-corredat_ct%>%
   select(site_project_comm, treatment_year)%>%
   unique()%>%
+  group_by(site_project_comm) %>% 
+  mutate(maxyear=max(treatment_year))%>% 
+  group_by(site_project_comm)%>%
+  filter(maxyear>7) %>% 
+  filter(treatment_year!=0)%>% 
+  filter(treatment_year<9) %>% 
   group_by(site_project_comm)%>%
   summarise(length=n())%>%
-  filter(length>11)%>%
-  select(-length)
+  filter(length>4)
 
 corredat_ct2<-corredat_ct%>%
-  right_join(datasetlength)%>%
-  filter(treatment_year!=0)
+  right_join(datasetlength)
 
 ###get mult_change
 #####look at mult change
@@ -288,42 +292,56 @@ mult_change2<-mult_change %>%
   select(-treatment, -treatment_year)
 
 multivariate<-mult_change2 %>% 
-  right_join(diff_mult2) 
+  right_join(diff_mult2) %>% 
+  right_join(datasetlength) %>% 
+  group_by(site_project_comm, trt2) %>% 
+  summarize_at(vars(composition_change, dispersion_change, composition_diff, abs_dispersion_diff), list(mean), na.rm=T)%>%
+  ungroup()
 
 
-###use ct_diff
+###use ct_diff but drop everything greater than yr 8 and average across all those years
+ct_diff_8orless<-ct_diff %>% 
+  filter(treatment_year<9) %>% 
+  filter(treatment_year!=0) %>% 
+  right_join(datasetlength) %>% 
+  group_by(site_project_comm, trt, trt2)%>%
+  summarize_at(vars(richness_diff, evenness_diff, rank_diff, species_diff), list(mean), na.rm=T)%>%
+  ungroup() 
+  
+  
 ###use control_change, but average across plots
 control_change2<-control_change %>% 
   group_by(site_project_comm, treatment_year, treatment_year2)%>%
   summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
-  ungroup() 
-
-RACs<-control_change2 %>% 
-  right_join(ct_diff) %>% 
+  ungroup() %>% 
+  filter(treatment_year!=0) %>% 
+  filter(treatment_year2<9) %>% 
+  group_by(site_project_comm)%>%
+  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
+  ungroup()%>% 
   right_join(datasetlength)
+  
+RACs<-control_change2 %>% 
+  right_join(ct_diff_8orless) 
 
 
 #####Merger RACs with Mult and drop all but four timepoints for all
 Metrics<-RACs%>%
-  right_join(multivariate)%>%
-  filter(treatment_year!="NA")%>%
-  filter(treatment_year!=0) %>% 
-  group_by(site_project_comm, trt, trt2)%>%
-  sample_n(4) 
+  right_join(multivariate)
   
 metrics2<-Metrics %>%
   mutate (site_project_comm_trt=paste(site_project_comm, trt2, sep="_"))
 unique(metrics2$site_project_comm_trt)
 unique(metrics2$site_project_comm)
 #### Metrics" IS THE DATA TO USE - Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
-#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv" , row.names=F)
+#write.csv(metrics2,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_Yrs1to8_Oct2020.csv" , row.names=F)
 
 #####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
 ###################Control_Change vs Difference using 4 yrs only######################
 #####################################################################################
 
-metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv")
+metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_Yrs1to8_Oct2020.csv")
 
 metrics3<-metrics2 %>% 
   group_by(site_project_comm,trt2)%>%
@@ -351,28 +369,28 @@ rvalues <- metrics3 %>%
   mutate(sig=ifelse(p.value<0.05, 1, 0))
 A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
   geom_point()+
-  geom_smooth(method="lm", se=F)+
+  #geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 A
 
 rvalues <- metrics3 %>%
-  summarize(r.value = round((cor.test(dispersion_change, abs_dispersion_diff)$estimate),
-                            digits=3), 
-            p.value = (cor.test(dispersion_change, abs_dispersion_diff)$p.value))%>%
+  summarize(r.value = round((cor.test(abs(dispersion_change), 
+                                      abs_dispersion_diff)$estimate), digits=3), 
+            p.value = (cor.test(abs(dispersion_change), abs_dispersion_diff)$p.value))%>%
   mutate(sig=ifelse(p.value<0.05, 1, 0))
 B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_point()+
-  #geom_smooth(method="lm", se=F)+
+  geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
-  summarize(r.value = round((cor.test(richness_change, richness_diff)$estimate),
+  summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
                             digits=3), 
-            p.value = (cor.test(richness_change, richness_diff)$p.value))%>%
+            p.value = (cor.test(abs(richness_change), abs(richness_diff))$p.value))%>%
   mutate(sig=ifelse(p.value<0.05, 1, 0))
 C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
   geom_point()+
-  #geom_smooth(method="lm", se=F)+
+  geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
@@ -382,7 +400,7 @@ rvalues <- metrics3 %>%
   mutate(sig=ifelse(p.value<0.05, 1, 0))
 D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
   geom_point()+
-  #geom_smooth(method="lm", se=F)+
+  geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
