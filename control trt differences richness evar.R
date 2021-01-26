@@ -1,6 +1,4 @@
 ##richness and evenness changes through time
-
-
 library(codyn)
 library(ggplot2)
 theme_set(theme_bw(12))+
@@ -12,10 +10,10 @@ library(broom)
 library(codyn)
 setwd("~/Dropbox/")
 
-setwd("C:\\Users\\megha\\Dropbox\\")
+#setwd("C:\\Users\\megha\\Dropbox\\")
 
 
-corredat<-read.csv("converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_March2019.csv")%>%
+corredat<-read.csv("converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Nov2019.csv")%>%
   select(-X)
 
 #gvn face - only 2 years of data so will only have one point for the dataset, therefore we are removing this dataset from these analyses.
@@ -234,9 +232,10 @@ ggplot(data=ct_cont_compare, aes(x=losses, y=species_diff))+
 datasetlength<-corredat_ct%>%
   select(site_project_comm, treatment_year)%>%
   unique()%>%
+  filter(treatment_year!=0) %>% 
   group_by(site_project_comm)%>%
   summarise(length=n())%>%
-  filter(length>5)%>%
+  filter(length>4)%>%
   select(-length)
 
 corredat_ct2<-corredat_ct%>%
@@ -300,6 +299,12 @@ RACs<-control_change2 %>%
   right_join(ct_diff) %>% 
   right_join(datasetlength)
 
+#get data list
+datalist<-RACs%>%
+  group_by(site_project_comm) %>% 
+  select(treatment_year) %>% 
+  unique() %>% 
+  summarise(years=n())
 
 #####Merger RACs with Mult and drop all but four timepoints for all
 Metrics<-RACs%>%
@@ -309,8 +314,10 @@ Metrics<-RACs%>%
   group_by(site_project_comm, trt, trt2)%>%
   sample_n(4) 
   
-#### Metrics" IS THE DATA TO USE - Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
-#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_July2019.csv" , row.names=F)
+#### Metrics == CvT_Metrics_RACsMult_4timepoints_July2019.csv IS THE DATA TO USE - Every time you run this and export it, it changes. ALSO somehow above 9 datasets are added in that are not supposed to be now. so the JULY2019 export is the correct export to use. 
+
+#Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
+#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Oct2020_D.csv" , row.names=F)
 
 #####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
@@ -342,11 +349,14 @@ metrics3<-metrics2 %>%
 
 ### get only GCD plots
 
+
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
                             digits=3), 
             p.value = (cor.test(composition_change, composition_diff)$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0)) %>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
@@ -357,17 +367,21 @@ rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(dispersion_change), abs_dispersion_diff)$estimate),
                             digits=3), 
             p.value = (cor.test(abs(dispersion_change), abs_dispersion_diff)$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_point()+
-  #geom_smooth(method="lm", se=F)+
+ # geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
                             digits=3), 
             p.value = (cor.test(abs(richness_change), abs(richness_diff))$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
   geom_point()+
   #geom_smooth(method="lm", se=F)+
@@ -377,7 +391,9 @@ rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
                             digits=3), 
             p.value = (cor.test(abs(evenness_change), abs(evenness_diff))$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
   geom_point()+
   #geom_smooth(method="lm", se=F)+
@@ -387,7 +403,9 @@ rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
                             digits=3), 
             p.value = (cor.test(rank_change, rank_diff)$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
@@ -397,7 +415,9 @@ rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(gains, species_diff)$estimate),
                             digits=3), 
             p.value = (cor.test(gains, species_diff)$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
@@ -407,7 +427,9 @@ rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(losses, species_diff)$estimate),
                             digits=3), 
             p.value = (cor.test(losses, species_diff)$p.value))%>%
-  mutate(sig=ifelse(p.value<0.05, 1, 0))
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
 H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+

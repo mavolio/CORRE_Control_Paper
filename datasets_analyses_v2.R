@@ -112,8 +112,10 @@ unique(data$site_project_comm)
 
 #get data list
 datalist<-data%>%
-  select(site_project_comm) %>% 
-  unique()
+  group_by(site_project_comm) %>% 
+  select(calendar_year) %>% 
+  unique() %>% 
+  summarise(years=n())
 #write.csv(datalist, "datasets_used_May2019.csv")
 
 ####Figures
@@ -508,6 +510,12 @@ YearlyLevelData<-SiteInfo %>%
 
 unique(YearlyLevelData$site_project_comm)
 
+Meta<-YearlyLevelData %>% 
+  select(site_project_comm, ANPP, MAP, MAT, rrich) %>% 
+  group_by(site_project_comm) %>% 
+  summarise(ANPP=mean(ANPP), MAP=mean(MAP), MAT=mean(MAT), rrich=mean(rrich))
+
+#write.csv(Meta, file="Meta_Jan2021.csv", row.names=F)
 
 ####Correlations
 pairs(YearlyLevelData[,c(2:12)])
@@ -549,7 +557,11 @@ ANPP_P<-as.data.frame(Regressions %>%
 ANPP_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 
-write.csv(ANPP_RegStats, file="ANPP_RegStats_5Oct2020.csv", row.names=F)
+ANPP_RegStats_Adjusted<-ANPP_RegStats %>% 
+  mutate(padjust=p.adjust(p.value, method = "BH", n=28))
+
+
+write.csv(ANPP_RegStats_Adjusted, file="ANPP_RegStats_20Janct2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$ANPP)
 summary(a)
@@ -574,8 +586,10 @@ ANPP_P<-as.data.frame(Regressions %>%
 
 MAP_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
+MAP_RegStats_Adjusted<-MAP_RegStats %>% 
+  mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-write.csv(MAP_RegStats, file="MAP_RegStats_5Oct2020.csv", row.names=F)
+write.csv(MAP_RegStats_Adjusted, file="MAP_RegStats_20Jan2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
 summary(a)
@@ -600,8 +614,10 @@ ANPP_P<-as.data.frame(Regressions %>%
 
 MAT_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
+MAT_RegStats_Adjusted<-MAT_RegStats %>% 
+  mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-write.csv(MAT_RegStats, file="MAT_RegStats_5Oct2020.csv", row.names=F)
+write.csv(MAT_RegStats_Adjusted, file="MAT_RegStats_20Jan2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
 summary(a)
@@ -625,8 +641,10 @@ ANPP_P<-as.data.frame(Regressions %>%
 
 RRich_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
+RRich_RegStats_Adjusted<-RRich_RegStats %>% 
+  mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-write.csv(RRich_RegStats, file="RRich_RegStats_5Oct2020.csv", row.names=F)
+write.csv(RRich_RegStats_Adjusted, file="RRich_RegStats_20Jan2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$rrich)
 summary(a)
