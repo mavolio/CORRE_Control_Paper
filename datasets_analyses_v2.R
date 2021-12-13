@@ -97,18 +97,20 @@ unique(codyndat_subset$site_project_comm)
 
 
 ### reading in and CLEANING grazing DATASET
+### Remove Germany site based on conversations with site owners - its undergoing direction succession
 grazing<-read.csv("GExforCoRREControlMS.csv")%>%
   mutate(site_project_comm = site, calendar_year = year,
          plot_id = paste (block, plot, sep = "_"))%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)%>%
-  mutate(relcov=relcov/100)
+  mutate(relcov=relcov/100) %>% 
+  filter(site_project_comm!="Germany2")
 
-
+unique(grazing$site_project_comm)
 
 data<-rbind(grazing, codyndat_subset, corredat_controls2)
 unique(data$site_project_comm)
 
-#write.csv(data, "control_subset_data.csv")
+#write.csv(data, "control_subset_data_Apr2021.csv")
 
 #get data list
 datalist<-data%>%
@@ -116,7 +118,7 @@ datalist<-data%>%
   select(calendar_year) %>% 
   unique() %>% 
   summarise(years=n())
-#write.csv(datalist, "datasets_used_May2019.csv")
+#write.csv(datalist, "datasets_used_Apr2021.csv")
 
 ####Figures
 theme_set(theme_bw())
@@ -142,7 +144,7 @@ for (i in 1:length(spc)){
   
   rt_change<-rbind(rt_change, out)
 }
-#write.csv(rt_change, 'rate_change_all_May2019.csv')
+#write.csv(rt_change, 'rate_change_all_Apr2021.csv')
 
 ###with each plot seperate - DONT use this because certain sites are way over-represented (some have 3, some have 50)
 ggplot(data=rt_change, aes(x=rate_change))+
@@ -190,7 +192,7 @@ for (i in 1:length(spc)){
   
   mult_change<-rbind(mult_change, out)
 }
-#write.csv(mult_change, 'Comm_change_all_May2019.csv')
+#write.csv(mult_change, 'Comm_change_all_Apr2021.csv')
 
 
 #RAC_Change
@@ -216,15 +218,17 @@ RACs2<-RACs %>%
             gains=mean(gains),
             losses=mean(losses))
 
+#write.csv(RACs2, file="Control_RACs_AllYears_Apr2021.csv", row.names=F)
+
 RACs_subset<- RACs2 %>% 
   left_join(mult_change) %>% 
   group_by(site_project_comm)%>%
   sample_n(7)
-#write.csv(RACs_subset, file="Control_RACs_subsetDownTo7_toUSE_5Oct2020.csv", row.names=F)
+#write.csv(RACs_subset, file="Control_RACs_subsetDownTo7_toUSE_Apr2021.csv", row.names=F)
 
 
 #######START HERE - was having trouble, stats changed every time because it was a random subset of 7 each time
-ToUse<-read.csv("Control_RACs_subsetDownTo7_toUSE_5Oct2020.csv")
+ToUse<-read.csv("Control_RACs_subsetDownTo7_toUSE_Apr2021.csv")
 
 YearlyMetrics_subset<- ToUse 
 
@@ -561,7 +565,7 @@ ANPP_RegStats_Adjusted<-ANPP_RegStats %>%
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
 
-write.csv(ANPP_RegStats_Adjusted, file="ANPP_RegStats_20Janct2021.csv", row.names=F)
+#write.csv(ANPP_RegStats_Adjusted, file="ANPP_RegStats_20Janct2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$ANPP)
 summary(a)
@@ -589,7 +593,7 @@ MAP_RegStats<-ANPP_P%>%
 MAP_RegStats_Adjusted<-MAP_RegStats %>% 
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-write.csv(MAP_RegStats_Adjusted, file="MAP_RegStats_20Jan2021.csv", row.names=F)
+#write.csv(MAP_RegStats_Adjusted, file="MAP_RegStats_20Jan2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
 summary(a)
@@ -617,7 +621,7 @@ MAT_RegStats<-ANPP_P%>%
 MAT_RegStats_Adjusted<-MAT_RegStats %>% 
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-write.csv(MAT_RegStats_Adjusted, file="MAT_RegStats_20Jan2021.csv", row.names=F)
+#write.csv(MAT_RegStats_Adjusted, file="MAT_RegStats_20Jan2021.csv", row.names=F)
 #check df
 a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
 summary(a)
