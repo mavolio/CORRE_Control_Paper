@@ -11,30 +11,39 @@ setwd("~/Dropbox/C2E/Products/Control Paper")
 
 ###reading in and cleaning corre data
 ####sk changed this to be in old files folder on July 2020 becuase wants code to run, but do we need to updat to new version?
-corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/old files - no longer necessary/SpeciesRelativeAbundance_March2019.csv")%>%
-  select(-X)%>%
+###SK (and KK) decided that we need to update to include new and longer datasets - did so on 14 Dec 2021
+
+corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_RelativeCover_Jan2023.csv")%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")%>%
   select(site_code, project_name, community_type, calendar_year, genus_species, relcov, treatment, plot_id, site_project_comm)
 
-
-
-corredat_info<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/ExperimentInformation_March2019.csv")%>%
-  select(-X)%>%
+corredat_info<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_ExperimentInfo_Dec2021.csv")%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")
 
-corredat_siteinfo<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SiteExperimentDetails_March2019.csv")%>%
-  select(-X)%>%
-  mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
-  filter(site_project_comm!="GVN_FACE_0")
+corredat_siteclimate<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/environmental data/CoRRE_siteLocationClimate_Dec2021.csv") 
 
-corredat_controls<-corredat%>%
+corredat_sitebiotic<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/environmental data/CoRRE_siteBiotic_Dec2021.csv")%>%
+  mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
+  filter(site_code!="GVN") #forest understory
+#%>% 
+ # select (site_code, project_name, community_type) %>% 
+  #unique()
+
+
+ corredat_controls<-corredat%>%
   left_join(corredat_info)%>%
-  left_join(corredat_siteinfo)%>%
-  filter(plot_mani==0, experiment_length>7, successional==0)%>%
+  left_join(corredat_sitebiotic)%>%
+  left_join(corredat_siteclimate)%>%
+  filter(plot_mani==0, successional==0)%>%
   select(site_project_comm, calendar_year, genus_species, relcov, plot_id)
-
+ 
+ ### use this to check to see if the data is mergeing right after each join
+ #filter(is.na(relcov)) %>% 
+ #unique()
+ 
+ 
 datasetlength<-corredat_controls%>%
 select(site_project_comm, calendar_year)%>%
   unique()%>%
@@ -110,7 +119,7 @@ unique(grazing$site_project_comm)
 data<-rbind(grazing, codyndat_subset, corredat_controls2)
 unique(data$site_project_comm)
 
-#write.csv(data, "control_subset_data_Apr2021.csv")
+#write.csv(data, "control_subset_data_May2023_v1.csv")
 
 #get data list
 datalist<-data%>%
@@ -118,7 +127,14 @@ datalist<-data%>%
   select(calendar_year) %>% 
   unique() %>% 
   summarise(years=n())
-#write.csv(datalist, "datasets_used_Apr2021.csv")
+#write.csv(datalist, "datasets_used_May2023_v1.csv")
+
+sitelist<- datalist %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep = "_")%>% 
+  group_by(site) %>% 
+  select(years) %>% 
+  unique()  %>% 
+  summarise(years=n())
 
 ####Figures
 theme_set(theme_bw())
@@ -144,7 +160,7 @@ for (i in 1:length(spc)){
   
   rt_change<-rbind(rt_change, out)
 }
-#write.csv(rt_change, 'rate_change_all_Apr2021.csv')
+#write.csv(rt_change, 'rate_change_all_May2023_v1.csv')
 
 ###with each plot seperate - DONT use this because certain sites are way over-represented (some have 3, some have 50)
 ggplot(data=rt_change, aes(x=rate_change))+
@@ -192,7 +208,7 @@ for (i in 1:length(spc)){
   
   mult_change<-rbind(mult_change, out)
 }
-#write.csv(mult_change, 'Comm_change_all_Apr2021.csv')
+write.csv(mult_change, 'Comm_change_all_May2023_v1.csv')
 
 
 #RAC_Change
@@ -218,17 +234,17 @@ RACs2<-RACs %>%
             gains=mean(gains),
             losses=mean(losses))
 
-#write.csv(RACs2, file="Control_RACs_AllYears_Apr2021.csv", row.names=F)
+#write.csv(RACs2, file="Control_RACs_AllYears_May2023_v1.csv", row.names=F)
 
 RACs_subset<- RACs2 %>% 
   left_join(mult_change) %>% 
   group_by(site_project_comm)%>%
   sample_n(7)
-#write.csv(RACs_subset, file="Control_RACs_subsetDownTo7_toUSE_Apr2021.csv", row.names=F)
+#write.csv(RACs_subset, file="Control_RACs_subsetDownTo7_toUSE_May2023_v1.csv", row.names=F)
 
 
 #######START HERE - was having trouble, stats changed every time because it was a random subset of 7 each time
-ToUse<-read.csv("Control_RACs_subsetDownTo7_toUSE_Apr2021.csv")
+ToUse<-read.csv("Control_RACs_subsetDownTo7_toUSE_May2023_v1.csv")
 
 YearlyMetrics_subset<- ToUse 
 
@@ -449,91 +465,50 @@ print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 
 
 ####TABLE 1 - looking at how change varies with site level characteristics
-####calculate gamma diversity
-species <- data%>%
-  tbl_df()%>%
-  group_by(site_project_comm, calendar_year, plot_id, genus_species)%>%
-  summarise(relcov=mean(relcov))%>%
-  filter(genus_species!="")%>%
-  tbl_df()
-
-SampleIntensity<-species%>%
-  tbl_df()%>%
-  group_by(site_project_comm, plot_id, calendar_year)%>%
-  summarize(SampleIntensity=length(relcov))%>%
-  tbl_df()%>%
-  group_by(site_project_comm)%>%
-  summarize(SampleIntensity=length(SampleIntensity))%>%#how many plots were sampled over the course of the experiment
-  tbl_df()
-
-exp<-unique(SampleIntensity$site_project_comm)
-
-#create empty dataframe for loop
-estimatedRichness=data.frame(row.names=1)
-
-for(i in 1:length(exp)) {
-  #creates a dataset for each unique experiment
-  subset <- species%>%
-    filter(site_project_comm==exp[i])%>%
-    select(site_project_comm, plot_id, calendar_year, genus_species, relcov)
-  #transpose data into wide form
-  speciesData <- subset%>%
-    spread(genus_species, relcov, fill=0)
-  #calculate species accumulation curves
-  pool <- poolaccum(speciesData[,4:ncol(speciesData)], permutations=100)
-  chao <- as.data.frame(as.matrix(pool$chao))#this gives us estimated richness from 1-X samples
-  chao$aveChao<-rowMeans(chao)
-  chao$n<-row.names(chao)
-  chao$exp<-exp[i]
-  chao2<-chao%>%
-    select(exp,n, aveChao)
-  
-  #rbind back
-  estimatedRichness<-rbind(chao2, estimatedRichness)
-  
-}
-
-
-
-ExpRichness<-estimatedRichness%>%
-  filter(n==30)%>%#the lowest sampling intensity -2
-  mutate(rrich=aveChao)%>%
-  select(-n, -aveChao) %>% 
-  rename(site_project_comm=exp)
-
-
 ###USE YearlyMetrics_subset and MeanMetrics_subset (which was created earlier)
 
-
-### import site info
-SiteInfo<-read.csv("datasets_used_May2019_withAddedSiteInfo.csv")%>%
-  left_join(ExpRichness)
 #Join with yearly data
-YearlyLevelData<-SiteInfo %>% 
-  left_join((YearlyMetrics_subset))
+YearlyLevelData<- YearlyMetrics_subset%>% 
+  left_join(corredat_sitebiotic)%>% 
+  left_join((corredat_siteclimate))
 
 unique(YearlyLevelData$site_project_comm)
 
 Meta<-YearlyLevelData %>% 
-  select(site_project_comm, ANPP, MAP, MAT, rrich) %>% 
+  select(site_project_comm, anpp, MAP, MAT, rrich) %>% 
   group_by(site_project_comm) %>% 
-  summarise(ANPP=mean(ANPP), MAP=mean(MAP), MAT=mean(MAT), rrich=mean(rrich))
+  summarise(ANPP=mean(anpp), MAP=mean(MAP), MAT=mean(MAT), rrich=mean(rrich))
 
-#write.csv(Meta, file="Meta_Jan2021.csv", row.names=F)
+Meta2<-Meta %>% 
+  filter (MAP!="NA")
+
+GoodCorre<-Meta2 %>% 
+  mutate(drop=1) %>% 
+  select(site_project_comm, drop)
+
+Meta3<-read.csv("~/Dropbox/C2E/Products/Control Paper/Meta_Jan2021_needforDec2021Code.csv") %>% 
+  filter(site_project_comm!="Germany2") %>% 
+  left_join(GoodCorre) %>% 
+  mutate_at(c("drop"), ~replace(., is.na(.), 0)) %>% 
+  filter(drop=="0") %>% 
+  select(-drop)
+
+Meta4<-Meta3 %>% 
+  full_join(Meta2) 
+#write.csv(Meta, file="Meta_Dec2021.csv", row.names=F)
+
+YearlyLevelData2<- YearlyMetrics_subset%>% 
+  left_join(Meta4)
+unique(YearlyLevelData2$site_project_comm)
 
 ####Correlations
-pairs(YearlyLevelData[,c(2:12)])
-chart.Correlation(YearlyLevelData[,2:12], histogram=TRUE, method="Pearson")
+pairs(YearlyLevelData2[,c(3:14)])
+chart.Correlation(YearlyLevelData2[,3:14], histogram=TRUE, method="pearson")
 
-###CompChange test, trying to figure out why tibble method give df 2, 31 instead of 1, 32 - but you need to run the next set of code before you do the test to get it by 1 # pert site
-YearlyLevelDataLong_MAP<-YearlyLevelDataLong %>% 
-  filter(metric=="composition_change")
-CompMAP<-lm(value~MAP, data=YearlyLevelDataLong_MAP)
-summary(CompMAP)
-### numbers are the same as below, not sure why df is 2, the above way reports 1
+
 
 #Regressions
-YearlyLevelDataLong<-YearlyLevelData %>% 
+YearlyLevelDataLong<-YearlyLevelData2 %>% 
   select(-calendar_year, -calendar_year2)%>%
   gather(metric, value, richness_change:dispersion_change) %>% 
   group_by(site_project_comm, ANPP, MAP, MAT, rrich, metric) %>% 
@@ -556,7 +531,7 @@ ANPP_R<-as.data.frame(Regressions %>%
 ANPP_P<-as.data.frame(Regressions %>% 
   unnest(tidied)) %>% 
   filter(term!="(Intercept)") %>% 
-  select(-statistic, -term)
+  select(metric, estimate, std.error, p.value)
 
 ANPP_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
@@ -564,11 +539,8 @@ ANPP_RegStats<-ANPP_P%>%
 ANPP_RegStats_Adjusted<-ANPP_RegStats %>% 
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
+#write.csv(ANPP_RegStats_Adjusted, file="ANPP_RegStats_May2023_AdjustedP.csv", row.names=F)
 
-#write.csv(ANPP_RegStats_Adjusted, file="ANPP_RegStats_20Janct2021.csv", row.names=F)
-#check df
-a<-lm(YearlyLevelData$rank_change~YearlyLevelData$ANPP)
-summary(a)
 
 
 Regressions<-YearlyLevelDataLong %>% 
@@ -586,17 +558,15 @@ ANPP_R<-as.data.frame(Regressions %>%
 ANPP_P<-as.data.frame(Regressions %>% 
                         unnest(tidied)) %>% 
   filter(term!="(Intercept)") %>% 
-  select(-statistic, -term)
+  select(metric, estimate, std.error, p.value)
 
 MAP_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 MAP_RegStats_Adjusted<-MAP_RegStats %>% 
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-#write.csv(MAP_RegStats_Adjusted, file="MAP_RegStats_20Jan2021.csv", row.names=F)
-#check df
-a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
-summary(a)
+#write.csv(MAP_RegStats_Adjusted, file="MAP_RegStats_May2023_AdjustedP.csv", row.names=F)
+
 
 
 Regressions<-YearlyLevelDataLong %>% 
@@ -614,17 +584,15 @@ ANPP_R<-as.data.frame(Regressions %>%
 ANPP_P<-as.data.frame(Regressions %>% 
                         unnest(tidied)) %>% 
   filter(term!="(Intercept)") %>% 
-  select(-statistic, -term)
+  select(metric, estimate, std.error, p.value)
 
 MAT_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 MAT_RegStats_Adjusted<-MAT_RegStats %>% 
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-#write.csv(MAT_RegStats_Adjusted, file="MAT_RegStats_20Jan2021.csv", row.names=F)
-#check df
-a<-lm(YearlyLevelData$rank_change~YearlyLevelData$MAP)
-summary(a)
+#write.csv(MAT_RegStats_Adjusted, file="MAT_RegStats_May2023_AdjustedP.csv", row.names=F)
+
 
 Regressions<-YearlyLevelDataLong %>% 
   nest(-metric) %>% 
@@ -641,17 +609,26 @@ ANPP_R<-as.data.frame(Regressions %>%
 ANPP_P<-as.data.frame(Regressions %>% 
                         unnest(tidied)) %>% 
   filter(term!="(Intercept)") %>% 
-  select(-statistic, -term)
+  select(metric, estimate, std.error, p.value)
 
 RRich_RegStats<-ANPP_P%>%
   left_join(ANPP_R)
 RRich_RegStats_Adjusted<-RRich_RegStats %>% 
   mutate(padjust=p.adjust(p.value, method = "BH", n=28))
 
-write.csv(RRich_RegStats_Adjusted, file="RRich_RegStats_20Jan2021.csv", row.names=F)
-#check df
-a<-lm(YearlyLevelData$rank_change~YearlyLevelData$rrich)
-summary(a)
+#write.csv(RRich_RegStats_Adjusted, file="RRich_RegStats_May2023_AdjustedP.csv", row.names=F)
+
+
+
+
+###CompChange test, trying to figure out if tibble method gives correct
+YearlyLevelDataLong_MAP<-YearlyLevelDataLong %>% 
+  filter(metric=="composition_change")
+CompMAP<-lm(value~MAP, data=YearlyLevelDataLong_MAP)
+summary(CompMAP)
+### numbers are the same as above (1,59)
+
+
 
 ####FIGURES WHICH WE ARE NOT using
 ### make things in long form
