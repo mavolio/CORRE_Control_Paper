@@ -12,8 +12,15 @@ setwd("~/Dropbox/")
 
 #setwd("C:\\Users\\megha\\Dropbox\\")
 
-corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_RelativeCover_Jan2023.csv")
+names<-read.csv("~/Dropbox/C2E/Products/Control Paper/FullList_Nov2021.csv")
 
+corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_RelativeCover_Jan2023.csv") %>% 
+  full_join(names) %>% 
+  filter(relcov!="NA") %>% 
+  group_by(site_code, project_name, community_type, calendar_year, treatment_year, treatment, block, plot_id, data_type, version, type, remove, species_matched) %>% 
+  summarise(relcov=(mean(relcov))) %>% 
+  filter(species_matched!="NA") %>%  ###MAY 10, 2023 --- this last line here is dropping 6 instances of an unknown species at KNZ that we cannot figure out. But maybe one day try adding them back in if kevin can figrue it out 
+  ungroup()
 
 #gvn face - only 2 years of data so will only have one point for the dataset, therefore we are removing this dataset from these analyses.
 corredat1<-corredat%>%
@@ -133,7 +140,7 @@ for (i in 1:length(spc)){
   subset<-corredat2%>%
     filter(site_project_comm==spc[i])
   
-  out<-RAC_change(subset, time.var = 'treatment_year', species.var="genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out<-RAC_change(subset, time.var = 'treatment_year', species.var="species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
   out$site_project_comm<-spc[i]
   
   change<-rbind(change, out)
@@ -160,7 +167,7 @@ for (i in 1:length(spc)){
   subset<-controls%>%
     filter(site_project_comm==spc[i])
   
-  out<-RAC_change(subset, time.var = 'treatment_year', species.var="genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out<-RAC_change(subset, time.var = 'treatment_year', species.var="species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
   out$site_project_comm<-spc[i]
   
   control_change<-rbind(control_change, out)
@@ -179,7 +186,8 @@ corredat_ct<-corredat2%>%
   mutate(treatment2=as.character(treatment)) 
 corredat_ct<-corredat_ct%>% 
   mutate(trt=ifelse(plot_mani==0, "C", corredat_ct$treatment2)) %>% 
-  mutate(trt=replace(trt, spct=="JSP_GCE_0::C", "CO2"))
+  mutate(trt=replace(trt, spct=="JSP_GCE_0::C", "CO2")) %>% 
+  ungroup()
 
 spc<-unique(corredat_ct$site_project_comm)
 ct_diff<-data.frame()
@@ -188,7 +196,7 @@ for (i in 1:length(spc)){
   subset<-corredat_ct%>%
     filter(site_project_comm==spc[i])
   
-  out<-RAC_difference(subset, time.var = 'treatment_year', species.var="genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', reference.treatment = "C", pool=T, treatment.var = "trt")
+  out<-RAC_difference(subset, time.var = 'treatment_year', species.var="species_matched", abundance.var = 'relcov', replicate.var = 'plot_id', reference.treatment = "C", pool=T, treatment.var = "trt")
   
   out$site_project_comm<-spc[i]
   
@@ -244,25 +252,12 @@ datasetlength<-corredat_ct%>%
   select(-length) 
 
 
-####OVERALL using first ten year and SUPP figure using all years (but subsetting to random 4)
+####OVERALL using first ten year and SUPP figure using all years (but subsetting to random)
 corredat_ct2<-corredat_ct%>%
   right_join(datasetlength)%>%
   filter(treatment_year!=0)
 
-#### find number of sites, numbers of experiments, and number of control trt comparisons
-site<-corredat_ct2 %>% 
-  select(site_code) %>% 
-  unique()
-
-exp<-corredat_ct2 %>% 
-  select(site_code, project_name, community_type) %>% 
-  unique()
-
-comparisons<-corredat_ct2 %>% 
-  filter(plot_mani!=0) %>% 
-  select(site_code, project_name, community_type, treatment) %>% 
-  unique()
-
+#### find full length of years
 years<-corredat_ct2 %>% 
   ungroup() %>% 
   select(site_code, project_name, community_type, calendar_year) %>% 
@@ -282,7 +277,7 @@ for (i in 1:length(spc)){
   subset<-corredat_ct3%>%
     filter(spct==spc[i])
   
-  out<-multivariate_change(subset, time.var = 'treatment_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out<-multivariate_change(subset, time.var = 'treatment_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
   out$spct<-spc[i]
   
   mult_change<-rbind(mult_change, out)
@@ -299,7 +294,7 @@ for (i in 1:length(spc)){
   
   ref_trt <- unique(subset(subset, plot_mani==0)$trt)
   
-  out<-multivariate_difference(subset, time.var = 'treatment_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = "trt", reference.treatment = ref_trt)
+  out<-multivariate_difference(subset, time.var = 'treatment_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = "trt", reference.treatment = ref_trt)
   
   out$site_project_comm<-spc[i]
   
@@ -343,25 +338,41 @@ Metrics<-RACs%>%
   mutate(timestep=treatment_year2-treatment_year) %>% 
   filter(timestep==1) %>%
   filter(site_project_comm!="ASGA_Exp1_a")%>%
-  #filter(treatment_year2<11) %>% 
+  filter(treatment_year2<11) %>% 
   sample_n(4) 
  
 #### Metrics == CvT_Metrics_RACsMult_4timepoints_July2019.csv IS THE DATA TO USE - Every time you run this and export it, it changes. ALSO somehow above 9 datasets are added in that are not supposed to be now. so the JULY2019 export is the correct export to use. 
 
 #Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
 #write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Oct2020_D.csv" , row.names=F)
-#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_AcrossAllYrs.csv" , row.names=F)
+write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_10yrless_UGH.csv" , row.names=F)
 #####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
 ###################Control_Change vs Difference using 4 yrs only######################
 #####################################################################################
 
-metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_AcrossAllYrs.csv")
+metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_10yrless_Ugh.csv")
 
 ###list
 list<-  as.data.frame(unique(metrics2$site_project_comm))
 write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs.csv")
-  
+
+#### find number of sites, numbers of experiments, and number of control trt comparisons
+site<-metrics2 %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>% 
+  select(site) %>% 
+  unique()
+
+exp<-metrics2 %>% 
+  select(site_project_comm) %>% 
+  unique()
+
+comparisons<-metrics2 %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>%
+  select(site, project, comm, trt2) %>% 
+  unique()
+
+#check years above before subsetting to random years
 
 metrics3<-metrics2 %>% 
   group_by(site_project_comm,trt2)%>%
@@ -392,7 +403,7 @@ rvalues <- metrics3 %>%
 
 A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
   geom_point()+
-  #geom_smooth(method="lm", se=F)+
+  geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 
@@ -417,7 +428,7 @@ rvalues <- metrics3 %>%
 
 C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
   geom_point()+
-  geom_smooth(method="lm", se=F)+
+ # geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
@@ -429,7 +440,7 @@ rvalues <- metrics3 %>%
 
 D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
   geom_point()+
-  geom_smooth(method="lm", se=F)+
+ # geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
@@ -509,19 +520,7 @@ corredat_ct2<-corredat_ct%>%
   filter(trt_type=="N"|trt_type=="P"|trt_type=="N*P"|trt_type=="mult_nutrient"|trt_type=="control") %>% 
   filter(site_project_comm!="SIU_TON_0")
 
-#### find number of sites, numbers of experiments, and number of control trt comparisons
-site<-corredat_ct2 %>% 
-  select(site_code) %>% 
-  unique()
-
-exp<-corredat_ct2 %>% 
-  select(site_code, project_name, community_type) %>% 
-  unique()
-
-comparisons<-corredat_ct2 %>% 
-  filter(plot_mani!=0) %>% 
-  select(site_code, project_name, community_type, treatment) %>% 
-  unique()
+#### find full length of dataset
 
 years<-corredat_ct2 %>% 
   ungroup() %>% 
@@ -542,7 +541,7 @@ for (i in 1:length(spc)){
   subset<-corredat_ct3%>%
     filter(spct==spc[i])
   
-  out<-multivariate_change(subset, time.var = 'treatment_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out<-multivariate_change(subset, time.var = 'treatment_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
   out$spct<-spc[i]
   
   mult_change<-rbind(mult_change, out)
@@ -559,7 +558,7 @@ for (i in 1:length(spc)){
   
   ref_trt <- unique(subset(subset, plot_mani==0)$trt)
   
-  out<-multivariate_difference(subset, time.var = 'treatment_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = "trt", reference.treatment = ref_trt)
+  out<-multivariate_difference(subset, time.var = 'treatment_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = "trt", reference.treatment = ref_trt)
   
   out$site_project_comm<-spc[i]
   
@@ -623,6 +622,21 @@ metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4time
 list<-  as.data.frame(unique(metrics2$site_project_comm))
 write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs_nutonly.csv")
 
+#### find number of sites, numbers of experiments, and number of control trt comparisons
+site<-metrics2 %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>% 
+  select(site) %>% 
+  unique()
+
+exp<-metrics2 %>% 
+  select(site_project_comm) %>% 
+  unique()
+
+comparisons<-metrics2 %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>%
+  select(site, project, comm, trt2) %>% 
+  unique()
+
 
 metrics3<-metrics2 %>% 
   group_by(site_project_comm,trt2)%>%
@@ -666,7 +680,7 @@ rvalues <- metrics3 %>%
 
 B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_point()+
-  geom_smooth(method="lm", se=F)+
+ # geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
@@ -690,7 +704,7 @@ rvalues <- metrics3 %>%
 
 D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
   geom_point()+
-  #geom_smooth(method="lm", se=F)+
+  geom_smooth(method="lm", se=F)+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
 
 rvalues <- metrics3 %>%
