@@ -15,7 +15,7 @@ setwd("~/Dropbox/C2E/Products/Control Paper")
 ###SK (and KK) decided that we need to update to include new and longer datasets - did so on 14 Dec 2021
 names<-read.csv("~/Dropbox/C2E/Products/Control Paper/FullList_Nov2021.csv")
 
-corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_RelativeCover_Jan2023.csv")%>%
+corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/old files/CoRRE_RelativeCover_Jan2023.csv")%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")%>%
   select(site_code, project_name, community_type, calendar_year, genus_species, relcov, treatment, plot_id, site_project_comm) %>% 
@@ -27,7 +27,7 @@ corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community
   ungroup()
 
 
-corredat_info<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_ExperimentInfo_Dec2021.csv")%>%
+corredat_info<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/old files/CoRRE_ExperimentInfo_Dec2021.csv")%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")
 
@@ -200,6 +200,13 @@ theme_update(axis.title.x=element_text(size=40, vjust=-0.35, margin=margin(t=15)
              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
              legend.title=element_blank(), legend.text=element_text(size=20))
 
+
+
+
+
+
+#write.csv(data, "control_subset_data_May2023_v1.csv")
+
 ####FIGURE 1 - Show that things are changing directionally in the controls
 #####look at directional change using all years of the data for all sites
 spc<-unique(data_directionalchange$site_project_comm)
@@ -318,9 +325,21 @@ RACs_subset <- RACs2 %>%
 
 #### now go back up and run lines 170- to get the first directional change figure and supp doc figure. 
 
+
+#######
+#######
+#######
+#######
+#######
+#######
+#######
+#######
+#######
+#######
 #######START HERE - was having trouble, stats changed every time because it was a random subset of 7 each time
 ToUse<-read.csv("Control_RACs_subsetDownTo7_toUSE_Nov2023_v1_dropmutipletimesteps.csv") 
 
+##SIDE TANGENT TO GET SUPP FIG
 #histogram of years included
 YearsUsed<-ggplot(data=ToUse, aes(x=calendar_year))+
   geom_density(aes(y=5 * ..count..), alpha=1, fill="grey")+
@@ -555,6 +574,10 @@ print(Rank, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 print(Rich, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
 print(Gains, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
+
+
+
+
 
 
 
@@ -967,4 +990,133 @@ ggplot(data=SiteLevelDataLong, aes(x=rrich, y=value))+
   geom_smooth(method="lm")+
   facet_wrap(~metric, scales="free")+
   geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###### KEEPING ALL YEARS OF DATA
+####graphs by experiment (avereaged yearly numbers together) --- need to get range into figure in upper right corner - wont work 
+range<-paste("-1 to 1")
+
+MeanMetrics_subset<-RACs2 %>%
+  left_join(mult_change) %>%
+  right_join(datasetlength_timesteps) %>% 
+  group_by(site_project_comm) %>% 
+  summarise(composition_change=mean(composition_change, na.rm=T), 
+            dispersion_change=mean(dispersion_change, na.rm=T),
+            richness_change=mean(richness_change),
+            evenness_change=mean(evenness_change, na.rm=T),
+            rank_change=mean(rank_change),
+            gains=mean(gains),
+            losses=mean(losses))
+
+Means<-MeanMetrics_subset %>% 
+  summarise(richness_change=mean(richness_change))
+CIs<-MeanMetrics_subset %>% 
+  summarise(CI=stderror(gains))
+
+CompChange<-ggplot(data=MeanMetrics_subset, aes(x=composition_change))+
+  geom_density(aes(y=.05 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .05, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(composition_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(composition_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Compositional Change")+
+  scale_y_continuous(breaks=c(0, 5, 10 , 15), name="Count")+
+  theme(legend.position = "none")
+#annotate("text", x=Inf, y=Inf, hjust=0, label=range, size=8, parse=TRUE)
+#geom_text("-1 to +1", mapping=aes(x=Inf, y = Inf), hjust=1.05, vjust=1.5)
+Disp<-ggplot(data=MeanMetrics_subset, aes(x=dispersion_change))+
+  geom_density(aes(y=.005 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .005, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(dispersion_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(dispersion_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Dispersion Change")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+Rich<-ggplot(data=MeanMetrics_subset, aes(x=richness_change))+
+  geom_density(aes(y=.015 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .015, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(richness_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(richness_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Richness Change")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+Even<-ggplot(data=MeanMetrics_subset, aes(x=evenness_change))+
+  geom_density(aes(y=.01 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .01, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(evenness_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(evenness_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Evenness Change")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+Rank<-ggplot(data=MeanMetrics_subset, aes(x=rank_change))+
+  geom_density(aes(y=.025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(rank_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(rank_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Rank Change")+
+  scale_y_continuous(breaks=c(0, 5, 10 , 15), name="Count")+
+  theme(legend.position = "none")
+
+Gains<-ggplot(data=MeanMetrics_subset, aes(x=gains))+
+  geom_density(aes(y=.025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(gains, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(gains, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Species Gains")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+Losses<-ggplot(data=MeanMetrics_subset, aes(x=losses))+
+  geom_density(aes(y=.025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(losses, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(losses, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Species Losses")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+
+
+library(grid)
+pushViewport(viewport(layout=grid.layout(2,4)))
+print(CompChange, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(Disp, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(Even, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(Rank, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(Rich, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
+print(Gains, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
+
+
 
