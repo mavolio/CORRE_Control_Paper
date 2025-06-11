@@ -14,7 +14,7 @@ setwd("~/Dropbox/")
 
 names<-read.csv("~/Dropbox/C2E/Products/Control Paper/FullList_Nov2021.csv")
 
-corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_RelativeCover_Jan2023.csv") %>% 
+corredat<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/old files/CoRRE_RelativeCover_Jan2023.csv") %>% 
   full_join(names) %>% 
   filter(relcov!="NA") %>% 
   group_by(site_code, project_name, community_type, calendar_year, treatment_year, treatment, block, plot_id, data_type, version, type, remove, species_matched) %>% 
@@ -68,7 +68,7 @@ edge<-corredat%>%
 corredat_raw<-rbind(corredat1, azi, jrn, knz, sak, cdr, edge)%>%
   mutate(spct=paste(site_project_comm, treatment, sep="::"))
 
-treatment_info<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/CoRRE_ExperimentInfo_Dec2021.csv")%>%
+treatment_info<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/community composition/old files/CoRRE_ExperimentInfo_Dec2021.csv")%>%
   select(site_code, project_name, community_type, treatment,plot_mani, trt_type, pulse, successional, nutrients, carbon, water)%>%
   unique()%>%
   #filter(plot_mani!=0)%>%
@@ -352,10 +352,10 @@ write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timep
 #####################################################################################
 
 metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_10yrless_Ugh.csv")
-
+#metrics2<-Metrics
 ###list
 list<-  as.data.frame(unique(metrics2$site_project_comm))
-write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs.csv")
+#write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs.csv")
 
 #### find number of sites, numbers of experiments, and number of control trt comparisons
 site<-metrics2 %>% 
@@ -755,3 +755,252 @@ print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####
+#####
+#####
+#####
+#####
+#####
+#####
+#####
+#####Including all available years of data
+Metrics2b<-RACs%>%
+  right_join(multivariate)%>%
+  filter(treatment_year!="NA")%>%
+  filter(treatment_year!=0) %>% 
+  group_by(site_project_comm, trt, trt2)%>%
+  mutate(timestep=treatment_year2-treatment_year) %>% 
+  filter(timestep==1) %>%
+  filter(site_project_comm!="ASGA_Exp1_a")
+
+metrics2b<-Metrics2b
+
+list<-  as.data.frame(unique(metrics2b$site_project_comm))
+
+#### find number of sites, numbers of experiments, and number of control trt comparisons
+site<-metrics2b %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>% 
+  select(site) %>% 
+  unique()
+
+exp<-metrics2b %>% 
+  select(site_project_comm) %>% 
+  unique()
+
+comparisons<-metrics2b %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>%
+  select(site, project, comm, trt2) %>% 
+  unique()
+
+#check years above before subsetting to random years
+
+metrics3<-metrics2b %>% 
+  group_by(site_project_comm,trt2)%>%
+  summarise(richness_change=mean(richness_change, na.rm=T),
+            richness_diff=mean(richness_diff, na.rm=T),
+            evenness_change=mean(evenness_change, na.rm=T),
+            evenness_diff=mean(evenness_diff, na.rm=T),
+            rank_change=mean(rank_change, na.rm=T),
+            rank_diff=mean(rank_diff, na.rm=T),
+            gains=mean(gains, na.rm=T),
+            losses=mean(losses, na.rm=T),
+            species_diff=mean(species_diff, na.rm=T),
+            composition_change=mean(composition_change, na.rm=T),
+            composition_diff=mean(composition_diff, na.rm=T),
+            dispersion_change=mean(dispersion_change, na.rm=T),
+            abs_dispersion_diff=mean(abs_dispersion_diff, na.rm=T))%>%
+  ungroup()
+
+### get only GCD plots
+
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(composition_change, composition_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0)) %>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
+  geom_point()+
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(dispersion_change), abs_dispersion_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(dispersion_change), abs_dispersion_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
+  geom_point()+
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(richness_change), abs(richness_diff))$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
+  geom_point()+
+ # geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(evenness_change), abs(evenness_diff))$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
+  geom_point()+
+   geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(rank_change, rank_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.1, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(gains, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(gains, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.1, vjust=1.5)
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(losses, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(losses, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+
+
+
+library(grid)
+pushViewport(viewport(layout=grid.layout(2,4)))
+print(CvCT, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(A, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(B, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(C, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(D, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
+print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
+print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
+
+modA<- lm(data=metrics3, composition_diff~composition_change)
+summary(modA)
+modB<- lm(data=metrics3, abs_dispersion_diff~abs(dispersion_change))
+summary(modB)
+modC<- lm(data=metrics3, abs(richness_diff)~abs(richness_change))
+summary(modC)
+modD<- lm(data=metrics3, abs(evenness_diff)~abs(evenness_change))
+summary(modD)
+modE<- lm(data=metrics3, rank_diff~rank_change)
+summary(modE)
+modF<- lm(data=metrics3, species_diff~gains)
+summary(modF)
+modG<- lm(data=metrics3, species_diff~losses)
+summary(modG)
+
+
+#####
+#####
+#####
+#####
+#####
+#####
+#####
+##### Make Figure S1 with this trt-contorl data - seperate for trt and control
+####FIGURE S1 - Show that things are NOT changing directionally in the controls but they are for the trt plots
+####use all years of the data for all sites
+data_directionalchange<-corredat2
+###SKKK START HERE ON THURSDAY - THIS IS BROKEN
+
+spc<-unique(data_directionalchange$site_project_comm)
+rt_change<-data.frame()
+
+for (i in 1:length(spc)){
+  
+  subset<-data_directionalchange%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-rate_change(subset, time.var = 'calendar_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  rt_change<-rbind(rt_change, out)
+}
+#write.csv(rt_change, 'rate_change_all_May2023_v1.csv')
+
+###with each plot seperate - DONT use this because certain sites are way over-represented (some have 3, some have 50)
+ggplot(data=rt_change, aes(x=rate_change))+
+  geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Rate of Directional Change")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+
+####Average all plots within a site
+rt_change2<-rt_change %>% 
+  group_by(site_project_comm)%>%
+  summarise(rate_change=mean(rate_change))
+
+ggplot(data=rt_change2, aes(x=rate_change))+
+  geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Rate of Directional Change")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
