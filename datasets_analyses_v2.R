@@ -225,7 +225,7 @@ for (i in 1:length(spc)){
 #write.csv(rt_change, 'rate_change_all_May2023_v1.csv')
 
 ###with each plot seperate - DONT use this because certain sites are way over-represented (some have 3, some have 50)
-ggplot(data=rt_change, aes(x=rate_change))+
+timelag<-ggplot(data=rt_change, aes(x=rate_change))+
   geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
   geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
   geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
@@ -234,24 +234,27 @@ ggplot(data=rt_change, aes(x=rate_change))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Rate of Directional Change")+
   scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
-
+  theme(legend.position = "none",
+        plot.margin = margin(t = 5, r = 30, b = 20, l = 5, unit = "pt"))
+#Export 1300*1000
 
 ####Average all plots within a site
 rt_change2<-rt_change %>% 
   group_by(site_project_comm)%>%
   summarise(rate_change=mean(rate_change))
 
-ggplot(data=rt_change2, aes(x=rate_change))+
+timelag2<-ggplot(data=rt_change2, aes(x=rate_change))+
   geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
   geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
   geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
              color="red", linetype="solid", size=.5)+
   geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
-  scale_x_continuous(name="Rate of Directional Change")+
-  scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
+  scale_x_continuous(name="Rate of Directional Change", limits = c(-0.015, .1))+
+  scale_y_continuous(name="Count", limits = c(0, 10))+
+  theme(legend.position = "none",
+        plot.margin = margin(t = 5, r = 30, b = 20, l = 5, unit = "pt"))
+ timelag2
 
 
 #####FIGURE 2 - Multchange and codyn metrics (all 7 panels together?)
