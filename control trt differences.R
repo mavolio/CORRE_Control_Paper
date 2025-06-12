@@ -1041,7 +1041,7 @@ treatments<-ggplot(data=rt_change_treatments, aes(x=rate_change))+
 
 ####Average all plots within a site
 rt_change_controls2<-rt_change_controls %>% 
-  group_by(site_project_comm)%>%
+  group_by(spct)%>%
   summarise(rate_change=mean(rate_change))
 
 controls_average<-ggplot(data=rt_change_controls2, aes(x=rate_change))+
@@ -1051,14 +1051,14 @@ controls_average<-ggplot(data=rt_change_controls2, aes(x=rate_change))+
              color="red", linetype="solid", size=.5)+
   geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
-  scale_x_continuous(name="Rate of Directional Change", limits = c(-0.015, .1))+
+  scale_x_continuous(name="Rate of Directional Change", limits = c(-0.03, .175))+
   scale_y_continuous(name="Count", limits = c(0, 10))+
   theme(legend.position = "none",
         plot.margin = margin(t = 5, r = 30, b = 20, l = 5, unit = "pt"))
 controls_average
 
 rt_change_treatments2<-rt_change_treatments %>% 
-  group_by(site_project_comm)%>%
+  group_by(spct)%>%
   summarise(rate_change=mean(rate_change))
 
 treatments_average<-ggplot(data=rt_change_treatments2, aes(x=rate_change))+
@@ -1068,14 +1068,17 @@ treatments_average<-ggplot(data=rt_change_treatments2, aes(x=rate_change))+
              color="red", linetype="solid", size=.5)+
   geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
-  scale_x_continuous(name="Rate of Directional Change", limits = c(-0.015, .1))+
-  scale_y_continuous(name="Count", limits = c(0, 10))+
+  scale_x_continuous(name="Rate of Directional Change", limits = c(-0.03, .175))+
+  scale_y_continuous(name="Count", limits = c(0, 25))+
   theme(legend.position = "none",
         plot.margin = margin(t = 5, r = 30, b = 20, l = 5, unit = "pt"))
 treatments_average
 
+###need to run timelag from other code "datasets_analyses_v2" in order to get panel 1
 library(grid)
 pushViewport(viewport(layout=grid.layout(3,1)))
 print(timelag2, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(controls_average, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 print(treatments_average, vp=viewport(layout.pos.row = 3, layout.pos.col = 1))
+
+#export at 800x2000
