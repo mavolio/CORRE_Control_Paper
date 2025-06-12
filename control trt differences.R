@@ -234,7 +234,7 @@ ct_cont_compare<-ct_ave%>%
 
 
 
-#####################################################################################
+#####################################################################################This is what we use,but some of the code above is needed (like where we create control_change)
 #####################################################################################
 #####################################################################################
 ##################Control_Change vs Difference using 4 yrs only######################
@@ -958,26 +958,76 @@ summary(modG)
 ##### Make Figure S1 with this trt-contorl data - seperate for trt and control
 ####FIGURE S1 - Show that things are NOT changing directionally in the controls but they are for the trt plots
 ####use all years of the data for all sites
-data_directionalchange<-corredat2
-###SKKK START HERE ON THURSDAY - THIS IS BROKEN
+data_directionalchange_alldata<-corredat_ct2 %>% ### this is the relativized sp comp data of only the experiments used in analysis 2
+  filter(site_project_comm!="ASGA_Exp1_a") %>% 
+  mutate(dropplots=paste(spct, plot_id, sep="_")) %>% 
+  filter(plot_id!='CR-FA-1') %>% 
+  filter(plot_id!='CR-FA-2') %>% 
+  filter(plot_id!='CR-FA3') %>% 
+  filter(plot_id!='CR-FA-4') %>% 
+  filter(plot_id!='CR-FA-5') %>% 
+  filter(plot_id!='NR-FA-1') %>% 
+  filter(plot_id!='NR-FA-2') %>% 
+  filter(plot_id!='NR-FA-3') %>% 
+  filter(plot_id!='NR-FA-4') %>% 
+  filter(plot_id!='NR-FA-5') %>% 
+  filter(dropplots!="Naiman_Nprecip_0::CK_W1_209_3" )%>% 
+  filter(dropplots!="Naiman_Nprecip_0::CK_W2_209_2" )
 
-spc<-unique(data_directionalchange$site_project_comm)
+error<- data_directionalchange_alldata %>% 
+  filter(spct=="Naiman_Nprecip_0::CK_W2") %>% 
+  group_by(spct, plot_id, calendar_year) %>% 
+  summarise(sum=n()) %>% 
+  group_by(spct, plot_id) %>% 
+  summarise(sum=n())
+
+spc<-unique(data_directionalchange_alldata$spct)
 rt_change<-data.frame()
 
 for (i in 1:length(spc)){
   
-  subset<-data_directionalchange%>%
-    filter(site_project_comm==spc[i])
+  subset<-data_directionalchange_alldata%>%
+    filter(spct==spc[i])
   
   out<-rate_change(subset, time.var = 'calendar_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
-  out$site_project_comm<-spc[i]
+  out$spct<-spc[i]
   
   rt_change<-rbind(rt_change, out)
 }
-#write.csv(rt_change, 'rate_change_all_May2023_v1.csv')
+
+treatment_info_2<-treatment_info %>% 
+  mutate(spct=paste(site_project_comm, treatment, sep="::"))
+
+rt_change_controls<-rt_change %>% 
+  left_join(treatment_info_2) %>% 
+  filter(plot_mani==0)
+
+rt_change_treatments<-rt_change %>% 
+  left_join(treatment_info_2) %>% 
+  filter(plot_mani!=0)
+
+theme_set(theme_bw())
+theme_set(theme_bw())
+theme_update(axis.title.x=element_text(size=40, vjust=-0.35, margin=margin(t=15)), axis.text.x=element_text(size=34, color='black'),
+             axis.title.y=element_text(size=40, angle=90, vjust=0.5, margin=margin(r=15)), axis.text.y=element_text(size=34, color='black'),
+             plot.title = element_text(size=40, vjust=2),
+             panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+             legend.title=element_blank(), legend.text=element_text(size=20))
+
 
 ###with each plot seperate - DONT use this because certain sites are way over-represented (some have 3, some have 50)
-ggplot(data=rt_change, aes(x=rate_change))+
+control<-ggplot(data=rt_change_controls, aes(x=rate_change))+
+  geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Rate of Directional Change")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+treatments<-ggplot(data=rt_change_treatments, aes(x=rate_change))+
   geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
   geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
   geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
@@ -990,17 +1040,32 @@ ggplot(data=rt_change, aes(x=rate_change))+
 
 
 ####Average all plots within a site
-rt_change2<-rt_change %>% 
+rt_change_controls2<-rt_change_controls %>% 
   group_by(site_project_comm)%>%
   summarise(rate_change=mean(rate_change))
 
-ggplot(data=rt_change2, aes(x=rate_change))+
+controls_average<-ggplot(data=rt_change_controls2, aes(x=rate_change))+
   geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
   geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
   geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
              color="red", linetype="solid", size=.5)+
   geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
-  scale_x_continuous(name="Rate of Directional Change")+
+  scale_x_continuous(name="Rate of Directional Change for Control Plots")+
+  scale_y_continuous(name="Count")+
+  theme(legend.position = "none")
+
+rt_change_treatments2<-rt_change_treatments %>% 
+  group_by(site_project_comm)%>%
+  summarise(rate_change=mean(rate_change))
+
+treatments_average<-ggplot(data=rt_change_treatments2, aes(x=rate_change))+
+  geom_density(aes(y=.0025 * ..count..), alpha=1, fill="grey")+
+  geom_histogram(binwidth= .0025, fill="white", colour="black", aes(alpha=.5))+
+  geom_vline(aes(xintercept=mean(rate_change, na.rm=T)),   
+             color="red", linetype="solid", size=.5)+
+  geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
+             color="red", linetype="dashed", size=.5)+
+  scale_x_continuous(name="Rate of Directional Change for Treatment Plots")+
   scale_y_continuous(name="Count")+
   theme(legend.position = "none")
