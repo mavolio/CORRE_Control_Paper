@@ -345,13 +345,15 @@ Metrics<-RACs%>%
 
 #Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
 #write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Oct2020_D.csv" , row.names=F)
-write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_10yrless_UGH.csv" , row.names=F)
+#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_10yrless_UGH.csv" , row.names=F)
 #####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
 ###################Control_Change vs Difference using 4 yrs only######################
 #####################################################################################
 
-metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_10yrless_Ugh.csv")
+metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_<10yrsMainAnalysis_29Nov2023.csv")
+#run this when you want to include all years of data - this is Fig S4
+#metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_AnyYrData_2SubsetAnalysis_29Nov2023.csv")
 #metrics2<-Metrics
 ###list
 list<-  as.data.frame(unique(metrics2$site_project_comm))
@@ -403,8 +405,12 @@ rvalues <- metrics3 %>%
 
 A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
   geom_point()+
-  geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Composition Change",
+    y = "Composition Difference")
 
 
 rvalues <- metrics3 %>%
@@ -417,7 +423,11 @@ rvalues <- metrics3 %>%
 B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Dispersion Change|",
+    y = "|Dispersion Difference|")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
@@ -428,8 +438,12 @@ rvalues <- metrics3 %>%
 
 C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
   geom_point()+
- # geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Richness Change|",
+    y = "|Richness Difference|")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
@@ -440,8 +454,12 @@ rvalues <- metrics3 %>%
 
 D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
   geom_point()+
- # geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Evenness Change|",
+    y = "|Evenness Difference|")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
@@ -453,7 +471,11 @@ rvalues <- metrics3 %>%
 E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Rank Change",
+    y = "Rank Difference")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(gains, species_diff)$estimate),
@@ -465,7 +487,11 @@ rvalues <- metrics3 %>%
 G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Gains",
+    y = "Species Difference")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(losses, species_diff)$estimate),
@@ -477,7 +503,11 @@ rvalues <- metrics3 %>%
 H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Losses",
+    y = "Species Difference")
 
 
 
@@ -492,21 +522,64 @@ print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
+#export at 1000x500
 
+
+####multiple regression of residuals vs site level characteristics
 modA<- lm(data=metrics3, composition_diff~composition_change)
 summary(modA)
+ResidualData<-cbind (metrics3, modA$residuals)
+
 modB<- lm(data=metrics3, abs_dispersion_diff~abs(dispersion_change))
 summary(modB)
+ResidualData<-cbind (ResidualData, modB$residuals)
+
 modC<- lm(data=metrics3, abs(richness_diff)~abs(richness_change))
 summary(modC)
+ResidualData<-cbind (ResidualData, modC$residuals)
+
 modD<- lm(data=metrics3, abs(evenness_diff)~abs(evenness_change))
 summary(modD)
+ResidualData<-cbind (ResidualData, modD$residuals)
+
 modE<- lm(data=metrics3, rank_diff~rank_change)
 summary(modE)
+ResidualData<-cbind (ResidualData, modE$residuals)
+
 modF<- lm(data=metrics3, species_diff~gains)
 summary(modF)
+ResidualData<-cbind (ResidualData, modF$residuals)
+
 modG<- lm(data=metrics3, species_diff~losses)
 summary(modG)
+ResidualData<-cbind (ResidualData, modG$residuals)
+
+corredat_sitebiotic<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/environmental data/CoRRE_siteBiotic_May2023.csv")%>%
+    mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
+    filter(site_code!="GVN")
+corredat_siteclimate<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/environmental data/CoRRE_siteLocationClimate_Dec2021.csv") 
+
+
+ScaledSiteData<-corredat_sitebiotic %>% 
+  full_join(corredat_siteclimate) %>% 
+  select(site_project_comm, anpp, MAP, MAT, rrich, annual_relcov) %>% 
+  group_by(site_project_comm) %>% 
+  summarise (ANPP_scaled=mean(anpp),
+             MAP_scaled=mean(MAP),
+             MAT_scaled=mean(MAT),
+             rrich_scaled=mean(rrich), 
+             annual_recov_scaled=mean(annual_relcov)) %>% 
+  mutate(across(where(is.numeric), scale))
+# standardize data now!
+
+Resid_Meta<-full_join(ResidualData, ScaledSiteData) %>% 
+  filter(richness_change!="NA")
+
+#Multiple Regression
+
+
+
+
 
 
 
@@ -610,17 +683,17 @@ Metrics<-RACs%>%
 
 #Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
 #write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Oct2020_D.csv" , row.names=F)
-write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_nutonly_10yrless.csv" , row.names=F)
+write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Dec2025_nutonly_10yrless.csv" , row.names=F)
 #####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
 ###################Control_Change vs Difference using 4 yrs only######################
 #####################################################################################
 
-metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_May2023_nutonly_10yrless.csv")
+metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Dec2025_nutonly_10yrless.csv")
 
 ###list
 list<-  as.data.frame(unique(metrics2$site_project_comm))
-write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs_nutonly.csv")
+#write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs_nutonly.csv")
 
 #### find number of sites, numbers of experiments, and number of control trt comparisons
 site<-metrics2 %>% 
@@ -668,7 +741,11 @@ rvalues <- metrics3 %>%
 A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Composition Change",
+    y = "Composition Difference")
 
 
 rvalues <- metrics3 %>%
@@ -680,8 +757,12 @@ rvalues <- metrics3 %>%
 
 B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
   geom_point()+
- # geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Dispersion Change|",
+    y = "|Dispersion Difference|")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
@@ -693,7 +774,11 @@ rvalues <- metrics3 %>%
 C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
   geom_point()+
   #geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Richness Change|",
+    y = "|Richness Difference|")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
@@ -704,8 +789,13 @@ rvalues <- metrics3 %>%
 
 D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
   geom_point()+
-  geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Evenness Change|",
+    y = "|Evenness Difference|")
+
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
@@ -717,7 +807,11 @@ rvalues <- metrics3 %>%
 E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Rank Change",
+    y = "Rank Difference")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(gains, species_diff)$estimate),
@@ -729,7 +823,11 @@ rvalues <- metrics3 %>%
 G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Gains",
+    y = "Species Difference")
 
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(losses, species_diff)$estimate),
@@ -741,7 +839,11 @@ rvalues <- metrics3 %>%
 H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
   geom_point()+
   geom_smooth(method="lm", se=F)+
-  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Losses",
+    y = "Species Difference")
 
 
 library(grid)
@@ -755,7 +857,7 @@ print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
 print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
-
+#Export 1000x500
 
 
 
