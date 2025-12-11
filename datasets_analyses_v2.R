@@ -936,6 +936,171 @@ summary(CompMAP)
 ### numbers are the same as above (1,59)
 
 
+####Multiple regressions
+
+#correlations
+head(YearlyLevelData2)
+
+panel.cor <- function(x, y, digits = 3, ...){
+  usr <- par("usr")
+  on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  cor.test <- cor.test(x, y)
+  r <- round(cor.test$estimate, digits = digits)
+  p <- round(cor.test$p.value, digits = digits)
+  text(0.5, 0.5, paste("r = ", r, "\np = ", p))
+}
+#Panel of correlations
+panel.corr <- function(x, y){
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- round(cor(x, y), digits=3)
+  txt <- paste0("Corr: ", r)
+  text(0.5, 0.5, txt, cex = 1)
+}
+
+#Panel of histograms
+panel.hist <- function(x, ...){
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(usr[1:2], 0, 1.5) )
+  h <- hist(x, plot = FALSE)
+  breaks <- h$breaks
+  len <- length(breaks)
+  y <- h$counts/max(h$counts)
+  rect(breaks[-len], 0, breaks[-1], y, col = "lightblue")
+}
+
+#Panel of scatterplots
+panel.scat <- function(x, y){
+  points(x,y, pch = 19, cex = 1, col = "coral")
+}
+
+pairs(YearlyLevelData2[11:15],
+      lower.panel = panel.scat,
+      upper.panel = panel.corr,
+      diag.panel = panel.hist,
+      labels = c("ANPP","MAP","MAT",
+                 "rrich","annual_relcov"),
+      gap = 0.3)
+
+pairs(YearlyLevelData2[11:15], lower.panel = panel.cor)
+
+###DROP ANPP - its .71 corr with MAP, and instead do a MAP*MAT interaction term
+
+ScaledSiteData<-YearlyLevelData2 %>% 
+  select(site_project_comm, ANPP, MAP, MAT, rrich, annual_relcov) %>% 
+  group_by(site_project_comm) %>% 
+  summarise (ANPP_scaled=mean(ANPP),
+             MAP_scaled=mean(MAP),
+             MAT_scaled=mean(MAT),
+             rrich_scaled=mean(rrich), 
+             annual_recov_scaled=mean(annual_relcov)) %>% 
+  mutate(across(where(is.numeric), scale))
+# standardize data now!
+
+### PCA
+dat<- ScaledSiteData
+pca <- princomp(dat[3:6])
+biplot(pca)
+summary(pca)
+
+library(ggfortify)
+autoplot(pca, data = dat, 
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = FALSE, loadings.label.size = 2.5)
+
+
+YearlyLevelData3<- YearlyLevelData2 %>% 
+  full_join(ScaledSiteData)
+head(YearlyLevelData3)
+
+comp_change<-(lm(composition_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(comp_change)
+
+disp_change<-(lm(dispersion_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(disp_change)
+
+rich_change<-(lm(richness_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(rich_change)
+
+even_change<-(lm(evenness_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(even_change)
+
+rank_change<-(lm(rank_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(rank_change)
+
+gains_change<-(lm(gains~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(gains_change)
+
+losses_change<-(lm(losses~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
+summary(losses_change)
+
+EffectSize<-read.csv("Q1_MultipleRegs_June2025_scaled.csv", header = TRUE)
+
+# Prepare data
+dat_plot <- EffectSize %>%
+  filter(drivers != "(Intercept)") %>%
+  mutate(
+    drivers = factor(drivers, levels = rev(c("MAT", "MAP", "MAP:MAT", "annual_relcov", "rrich"))),
+    CI_lower = Estimate - 1.96 * Std.Error,
+    CI_upper = Estimate + 1.96 * Std.Error,
+    Effect = case_when(
+      P < 0.05 & Estimate > 0 ~ "Positive",
+      P < 0.05 & Estimate < 0 ~ "Negative",
+      TRUE ~ "Not significant"
+    )
+  )
+
+# Plot
+dat_plot2<-dat_plot %>% 
+    mutate(across(community_metric, ~factor(., levels=c("comp_change","disp_change", "even_change", "rich_change", "rank_change", "gains", "losses"))))
+metric_labels <- c(
+  comp_change = "Composition\nChange",
+  disp_change = "Dispersion\nChange",
+  even_change = "Evenness\nChange",
+  rich_change = "Richness\nChange",
+  rank_change = "Rank\nChange",
+  gains = "Species\nGains",
+  losses = "Species\nLosses"
+)
+driver_labels <- c(
+  annual_relcov = "% Annual\nCover",
+  rrich = "Gamma\nRichness"
+)
+
+ggplot(dat_plot2, aes(x = drivers, y = Estimate, ymin = CI_lower, ymax = CI_upper)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_pointrange(aes(color = Effect), size = 1.8, fatten =2.8) +
+  scale_color_manual(values = c(
+    "Positive" = "blue",
+    "Negative" = "darkorange",
+    "Not significant" = "gray60"
+  )) +
+  facet_grid(. ~ community_metric,
+             labeller = labeller(community_metric = metric_labels)) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0.01, 0.01)))+
+  scale_x_discrete(labels = function(x) dplyr::recode(
+    x,
+    annual_relcov = "% Annual\nCover",
+    rrich        = "Gamma\nRichness",
+    .default     = x   # keep other labels as-is
+  ), expand = expansion(mult = c(0.2, 0.2)), ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(size = 13.5, margin = margin(r = 2)),
+    strip.text = element_text(face = "bold", size = 16),
+    legend.title = element_blank(),
+    axis.text.x = element_text(angle = 90, size=12, vjust=.5),
+    legend.key.height = unit(1.6, "lines"),
+    panel.spacing.x = unit(0.1, "lines"),
+    panel.spacing.y = unit(0.1, "lines")
+  ) +
+  labs(
+    y = "Estimate (± 95% CI)"
+  )
+#expor 1200x400
 
 ####FIGURES WHICH WE ARE NOT using
 ### make things in long form
