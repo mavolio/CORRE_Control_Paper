@@ -576,7 +576,100 @@ Resid_Meta<-full_join(ResidualData, ScaledSiteData) %>%
   filter(richness_change!="NA")
 
 #Multiple Regression
+comp_change<-(lm(modA$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(comp_change)
 
+disp_change<-(lm(modB$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(disp_change)
+
+rich_change<-(lm(modC$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(rich_change)
+
+even_change<-(lm(modD$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(even_change)
+
+rank_change<-(lm(modE$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(rank_change)
+
+gains_change<-(lm(modF$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(gains_change)
+
+losses_change<-(lm(modG$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
+summary(losses_change)
+
+EffectSize<-read.csv("~/Dropbox/C2E/Products/Control Paper/Q2_MultipleRegs_Dec2025_scaled.csv", header = TRUE)
+
+# Prepare data
+dat_plot <- EffectSize %>%
+  filter(drivers != "(Intercept)") %>%
+  select(-X, -X.1, -X.2, -X.3, -X.4, -X.5, -X.6) %>% 
+  mutate(drivers2=drivers) %>% 
+  mutate(
+    drivers2 = factor(drivers, levels = rev(c("MAT", "MAP", "MAP:MAT", "annual_relcov", "rrich"))),
+    CI_lower = Estimate - 1.96 * Std.Error,
+    CI_upper = Estimate + 1.96 * Std.Error,
+    Effect = case_when(
+      P < 0.05 & Estimate > 0 ~ "Positive",
+      P < 0.05 & Estimate < 0 ~ "Negative",
+      TRUE ~ "Not significant"
+    )
+  ) %>% 
+  select(-drivers2)
+
+# Plot
+
+metric_labels <- c(
+  comp_change = "Composition\nChange",
+  disp_change = "Dispersion\nChange",
+  even_change = "Evenness\nChange",
+  rich_change = "Richness\nChange",
+  rankk_change = "Rank\nChange",
+  gains = "Species\nGains",
+  losses = "Species\nLosses"
+)
+
+driver_labels <- c(
+  MAT_scaled="MAT",
+  MAP_scaled="MAP",
+  "MAP_scaled:MAT_scaled"="MAP:MAT",
+  annual_recov_scaled = "% Annual\nCover",
+  rrich_scaled= "Gamma\nRichness"
+)
+
+dat_plot2<-dat_plot %>% 
+  mutate(across(community_metric, ~factor(., levels=c("comp_change","disp_change", "even_change", "rich_change", "rankk_change", "gains", "losses")))) %>% 
+  mutate(drivers = factor(drivers, levels = rev(names(driver_labels))))
+
+ggplot(dat_plot2, aes(x = drivers, y = Estimate, ymin = CI_lower, ymax = CI_upper)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_pointrange(aes(color = Effect), size = 1.8, fatten =2.8) +
+  scale_color_manual(values = c(
+    "Positive" = "blue",
+    "Negative" = "darkorange",
+    "Not significant" = "gray60"
+  )) +
+  facet_grid(. ~ community_metric,
+             labeller = labeller(community_metric = metric_labels)) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0.01, 0.01)))+
+  scale_x_discrete( labels = driver_labels,
+    expand = expansion(mult = c(0.2, 0.2))) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(size = 13.5, margin = margin(r = 2), ),
+    strip.text = element_text(face = "bold", size = 14.5,  margin = margin(b = 4)),
+    legend.title = element_blank(),
+    axis.text.x = element_text(angle = 90, size=12, vjust=.5),
+    legend.key.height = unit(1.6, "lines"),
+    panel.spacing.x = unit(1, "lines"),
+    panel.spacing.y = unit(0.1, "lines"),
+    plot.margin       = margin(t = 20, r = 5, b = 5, l = 5, unit = "pt") 
+  ) +
+  labs(
+    y = "Estimate (± 95% CI)"
+  )
+#expor 1200x400
 
 
 
