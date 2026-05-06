@@ -67,9 +67,14 @@ make_panel <- function(title, subtitle, ambient_arrow_size, gcd_arrow_size,
              fontface = "italic", size = 3.8, color = border_col) +
     
     # circles
-    geom_circle(data = circles,
-                aes(x0 = x, y0 = y, r = 0.62),
-                fill = "white", color = circles$border, linewidth = 1.1) +
+    geom_circle(
+      data = circles,
+      aes(x0 = x, y0 = y, r = 0.62, color = border),
+      fill = "white",
+      linewidth = 1.1,
+      inherit.aes = FALSE
+    ) +
+    scale_color_identity() +
     
     # plant stems
     geom_segment(data = plants,
@@ -78,7 +83,7 @@ make_panel <- function(title, subtitle, ambient_arrow_size, gcd_arrow_size,
     geom_text(data = plants %>% filter(flower != ""),
               aes(x = x + 0.06, y = y1 + 0.05, label = flower, color = flower_col),
               size = 4, show.legend = FALSE) +
-    scale_color_identity() +
+  
     
     # arrows
     annotate("segment", x = 1.75, xend = 2.55, y = 2.4, yend = 2.4,
@@ -270,3 +275,343 @@ ggsave(
   width = 13,
   height = 8
 )
+
+###VERSION 2 Much Simpler####
+# install.packages("ggplot2") if needed
+library(ggplot2)
+
+# ----------------------------
+# Data for curve
+# ----------------------------
+curve_dat <- data.frame(
+  x = seq(0, 1, length.out = 200)
+)
+
+# sublinear/saturating relationship
+curve_dat$y <- 0.75 * (1 - exp(-2.5 * curve_dat$x))
+
+# example points for labeling regions
+points_dat <- data.frame(
+  x = c(0.15, 0.5, 0.85),
+  y = 0.75 * (1 - exp(-2.5 * c(0.15, 0.5, 0.85))),
+  label = c("Low background\nchange",
+            "Intermediate",
+            "High background\nchange")
+)
+
+# ----------------------------
+# Plot
+# ----------------------------
+p <- ggplot(curve_dat, aes(x, y)) +
+  
+  # 1:1 line
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "grey50",
+    linewidth = 0.8
+  ) +
+  
+  # observed curve
+  geom_line(
+    color = "#2C7FB8",
+    linewidth = 1.5
+  ) +
+  
+  # points
+  geom_point(
+    data = points_dat,
+    aes(x = x, y = y),
+    size = 3.5
+  ) +
+  
+  # vertical dashed guides
+  geom_segment(
+    data = points_dat,
+    aes(x = x, xend = x, y = 0, yend = y),
+    linetype = "dotted",
+    color = "grey60"
+  ) +
+  
+  # labels for regions
+  geom_text(
+    data = points_dat,
+    aes(x = x, y = y, label = label),
+    nudge_y = 0.08,
+    size = 3.8
+  ) +
+  
+  # annotations
+  annotate(
+    "text",
+    x = 0.75,
+    y = 0.95,
+    label = "1:1 expectation",
+    color = "grey40",
+    size = 3.5
+  ) +
+  
+  annotate(
+    "text",
+    x = 0.65,
+    y = 0.35,
+    label = "Observed pattern:\nresponses increase,\nbut not proportionally",
+    color = "#2C7FB8",
+    size = 3.8,
+    hjust = 0
+  ) +
+  
+  # axes
+  labs(
+    x = "Background (ambient) community change",
+    y = "Response to global change (GCD-driven change)"
+  ) +
+  
+  # clean theme
+  theme_classic(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  ) +
+  
+  coord_cartesian(
+    xlim = c(0, 1),
+    ylim = c(0, 1)
+  )
+
+# show plot
+p
+
+# save
+ggsave("conceptual_figure_simple.png", p, width = 6, height = 5, dpi = 300)
+ggsave("conceptual_figure_simple.pdf", p, width = 6, height = 5)
+
+
+####Two panels, with one following original idea more
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+
+# -----------------------------
+# Scenario data
+# -----------------------------
+scenarios <- tibble::tibble(
+  case = factor(c("a", "b", "c", "d", "e"),
+                levels = c("a", "b", "c", "d", "e")),
+  ambient_change = c(12, 25, 38, 14, 38),
+  gcd_change     = c(12, 25, 38, 42, 22)
+)
+
+# -----------------------------
+# Case-specific colors
+# light = ambient arrow
+# dark  = GCD arrow / point
+# -----------------------------
+scenario_cols <- tibble::tibble(
+  case = factor(c("a", "b", "c", "d", "e"),
+                levels = c("a", "b", "c", "d", "e")),
+  ambient_col = c("#A6CEE3", "#B2DF8A", "#CAB2D6", "#FDBF6F", "#BDBDBD"),
+  gcd_col     = c("#1F78B4", "#33A02C", "#6A3D9A", "#E31A1C", "#000000")
+)
+
+scenarios_a <- scenarios %>%
+  left_join(scenario_cols, by = "case") %>%
+  mutate(
+    x = as.numeric(case),
+    x_A = x - 0.18,
+    x_GCD = x + 0.18,
+    S = 0,
+    A_height = ambient_change,
+    GCD_height = gcd_change
+  )
+
+# -----------------------------
+# Panel A
+# -----------------------------
+panel_a <- ggplot(scenarios_a) +
+  
+  # Ambient arrow: S -> A
+  geom_segment(
+    aes(x = x_A, xend = x_A, y = S, yend = A_height, color = ambient_col),
+    linewidth = 1.7,
+    arrow = arrow(length = unit(0.12, "inches"), type = "closed")
+  ) +
+  
+  # GCD arrow: S -> GCD
+  geom_segment(
+    aes(x = x_GCD, xend = x_GCD, y = S, yend = GCD_height, color = gcd_col),
+    linewidth = 2.4,
+    arrow = arrow(length = unit(0.12, "inches"), type = "closed")
+  ) +
+  
+  # S labels
+  geom_text(
+    aes(x = x, y = S, label = "S"),
+    nudge_y = -3.5,
+    size = 4.5,
+    fontface = "bold",
+    color = "black"
+  ) +
+  
+  # A labels
+  geom_text(
+    aes(x = x_A, y = A_height, label = "A", color = ambient_col),
+    nudge_y = 3.2,
+    size = 4.5,
+    fontface = "bold"
+  ) +
+  
+  # GCD labels
+  geom_text(
+    aes(x = x_GCD, y = GCD_height, label = "GCD", color = gcd_col),
+    nudge_y = 3.2,
+    size = 3.7,
+    fontface = "bold"
+  ) +
+  
+  scale_x_continuous(
+    breaks = 1:5,
+    labels = levels(scenarios_a$case),
+    expand = expansion(mult = c(0.08, 0.08))
+  ) +
+  
+  scale_y_continuous(
+    limits = c(-6, 55),
+    breaks = seq(0, 50, 10),
+    expand = expansion(mult = c(0.02, 0.04))
+  ) +
+  
+  scale_color_identity() +
+  
+  labs(
+    x = "Case",
+    y = "Community dissimilarity",
+    title = "A."
+  ) +
+  
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    axis.text.x = element_text(face = "bold"),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  )
+
+# -----------------------------
+# Panel B
+# -----------------------------
+panel_b <- ggplot(scenarios_a, aes(x = ambient_change, y = gcd_change)) +
+  
+  # Shaded region where GCD > ambient
+  annotate(
+    "polygon",
+    x = c(0, 55, 0),
+    y = c(0, 55, 55),
+    fill = "#FEE0D2",
+    alpha = 0.55
+  ) +
+  
+  # Shaded region where GCD < ambient
+  annotate(
+    "polygon",
+    x = c(0, 55, 55),
+    y = c(0, 0, 55),
+    fill = "#DEEBF7",
+    alpha = 0.55
+  ) +
+  
+  # 1:1 line
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "grey35",
+    linewidth = 0.9
+  ) +
+  
+  # Scenario points
+  geom_point(
+    aes(fill = gcd_col),
+    shape = 21,
+    size = 12,
+    color = "black",
+    stroke = 0.8
+  ) +
+  
+  # Case labels
+  geom_text(
+    aes(label = case),
+    color = "white",    # contrast inside dark circles
+    fontface = "bold",
+    size = 5
+  ) +
+  
+  # Region labels moved to corners
+  annotate(
+    "text",
+    x = 3,
+    y = 51,
+    label = "GCD-driven difference\n> background temporal change",
+    color = "#CB181D",
+    size = 3.6,
+    hjust = 0,
+    vjust = 1
+  ) +
+  
+  annotate(
+    "text",
+    x = 52,
+    y = 3,
+    label = "GCD-driven difference\n< background temporal change",
+    color = "#08519C",
+    size = 3.6,
+    hjust = 1,
+    vjust = 0
+  ) +
+  
+  annotate(
+    "text",
+    x = 40,
+    y = 42,
+    label = "1:1 proportional expectation",
+    color = "grey30",
+    size = 3.3,
+    angle = 38,
+    hjust = 0
+  ) +
+  
+  scale_fill_identity() +
+  
+  coord_cartesian(
+    xlim = c(0, 55),
+    ylim = c(0, 55),
+    expand = FALSE
+  ) +
+  
+  labs(
+    x = "Background temporal change\n(S → A)",
+    y = "GCD-driven difference\n(S → GCD)",
+    title = "B."
+  ) +
+  
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.position = "none"
+  )
+
+# -----------------------------
+# Combine panels
+# -----------------------------
+fig1 <- panel_a + panel_b +
+  plot_layout(widths = c(1, 1.25))
+  
+
+fig1
+
+ggsave("conceptual_framework_two_panel.png", fig1, width = 11, height = 5.5, dpi = 300)
+ggsave("conceptual_framework_two_panel.pdf", fig1, width = 11, height = 5.5)
