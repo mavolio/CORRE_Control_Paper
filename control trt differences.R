@@ -571,11 +571,11 @@ dat_plot <- EffectSize %>%
 # Plot
 
 metric_labels <- c(
-  comp_change = "Composition\nChange",
-  disp_change = "Dispersion\nChange",
-  even_change = "Evenness\nChange",
-  rich_change = "Richness\nChange",
-  rankk_change = "Rank\nChange",
+  comp_change = "Composition",
+  disp_change = "Dispersion",
+  even_change = "Evenness",
+  rich_change = "Richness",
+  rankk_change = "Rank",
   gains = "Species\nGains",
   losses = "Species\nLosses"
 )

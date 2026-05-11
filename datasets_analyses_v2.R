@@ -486,6 +486,10 @@ print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 
 
 ####graphs by experiment (avereaged yearly numbers together) --- need to get range into figure in upper right corner - wont work 
+bottom_margin <- theme(
+  plot.margin = margin(t = 5, r = 5, b = 18, l = 5),
+  axis.title.x = element_text(margin = margin(t = 8))
+)
 range<-paste("-1 to 1")
 
 CompChange<-ggplot(data=MeanMetrics_subset, aes(x=composition_change))+
@@ -497,7 +501,8 @@ CompChange<-ggplot(data=MeanMetrics_subset, aes(x=composition_change))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Compositional Change")+
   scale_y_continuous(breaks=c(0, 5, 10 , 15), name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 #annotate("text", x=Inf, y=Inf, hjust=0, label=range, size=8, parse=TRUE)
 #geom_text("-1 to +1", mapping=aes(x=Inf, y = Inf), hjust=1.05, vjust=1.5)
 Disp<-ggplot(data=MeanMetrics_subset, aes(x=dispersion_change))+
@@ -509,7 +514,8 @@ Disp<-ggplot(data=MeanMetrics_subset, aes(x=dispersion_change))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Dispersion Change")+
   scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 
 Rich<-ggplot(data=MeanMetrics_subset, aes(x=richness_change))+
   geom_density(aes(y=.015 * ..count..), alpha=1, fill="grey")+
@@ -520,7 +526,8 @@ Rich<-ggplot(data=MeanMetrics_subset, aes(x=richness_change))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Richness Change")+
   scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 
 Even<-ggplot(data=MeanMetrics_subset, aes(x=evenness_change))+
   geom_density(aes(y=.01 * ..count..), alpha=1, fill="grey")+
@@ -531,7 +538,8 @@ Even<-ggplot(data=MeanMetrics_subset, aes(x=evenness_change))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Evenness Change")+
   scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 
 Rank<-ggplot(data=MeanMetrics_subset, aes(x=rank_change))+
   geom_density(aes(y=.025 * ..count..), alpha=1, fill="grey")+
@@ -542,7 +550,8 @@ Rank<-ggplot(data=MeanMetrics_subset, aes(x=rank_change))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Rank Change")+
   scale_y_continuous(breaks=c(0, 5, 10 , 15), name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 
 Gains<-ggplot(data=MeanMetrics_subset, aes(x=gains))+
   geom_density(aes(y=.025 * ..count..), alpha=1, fill="grey")+
@@ -553,7 +562,8 @@ Gains<-ggplot(data=MeanMetrics_subset, aes(x=gains))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Species Gains")+
   scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 
 Losses<-ggplot(data=MeanMetrics_subset, aes(x=losses))+
   geom_density(aes(y=.025 * ..count..), alpha=1, fill="grey")+
@@ -564,7 +574,8 @@ Losses<-ggplot(data=MeanMetrics_subset, aes(x=losses))+
              color="red", linetype="dashed", size=.5)+
   scale_x_continuous(name="Species Losses")+
   scale_y_continuous(name="Count")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  bottom_margin
 
 
 
