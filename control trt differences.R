@@ -1347,7 +1347,7 @@ controls_average<-ggplot(data=rt_change_controls2, aes(x=rate_change))+
              color="red", linetype="solid", size=.5)+
   geom_vline(aes(xintercept=median(rate_change, na.rm=T)),   
              color="red", linetype="dashed", size=.5)+
-  scale_x_continuous(name="Rate of Directional Change", limits = c(-0.03, .175))+
+  scale_x_continuous(name="Rate of Directional Change", limits = c(0, .175))+
   scale_y_continuous(name="Count", limits = c(0, 10))+
   theme(legend.position = "none",
         plot.margin = margin(t = 5, r = 30, b = 20, l = 5, unit = "pt"))
