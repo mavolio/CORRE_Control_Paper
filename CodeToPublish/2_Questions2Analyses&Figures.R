@@ -184,45 +184,44 @@ print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
 #Export 1000x500
 
 #### Calculate Residuals from the models in Figure 4
-modA<- lm(data=metrics3, composition_diff~composition_change)
-summary(modA)
-ResidualData<-cbind (metrics3, modA$residuals)
+metrics3 <- metrics3 %>%
+  mutate(row_id = row_number())
 
-modB<- lm(data=metrics3, abs_dispersion_diff~abs(dispersion_change))
-summary(modB)
-ResidualData<-cbind (ResidualData, modB$residuals)
+get_resids <- function(data, formula, resid_name) {
+  model_data <- model.frame(formula, data = data, na.action = na.omit)
+  
+  used_rows <- as.numeric(rownames(model_data))
+  
+  mod <- lm(formula, data = data, na.action = na.omit)
+  
+  tibble(
+    row_id = used_rows,
+    !!resid_name := residuals(mod)
+  )
+}
 
-modC<- lm(data=metrics3, abs(richness_diff)~abs(richness_change))
-summary(modC)
-ResidualData<-cbind (ResidualData, modC$residuals)
-
-modD<- lm(data=metrics3, abs(evenness_diff)~abs(evenness_change))
-summary(modD)
-ResidualData<-cbind (ResidualData, modD$residuals)
-
-modE<- lm(data=metrics3, rank_diff~rank_change)
-summary(modE)
-ResidualData<-cbind (ResidualData, modE$residuals)
-
-modF<- lm(data=metrics3, species_diff~gains)
-summary(modF)
-ResidualData<-cbind (ResidualData, modF$residuals)
-
-modG<- lm(data=metrics3, species_diff~losses)
-summary(modG)
-ResidualData<-cbind (ResidualData, modG$residuals)
+ResidualData <- metrics3 %>%
+  left_join(get_resids(metrics3, composition_diff ~ composition_change, "resid_composition"),
+            by = "row_id") %>%
+  left_join(get_resids(metrics3, abs_dispersion_diff ~ abs(dispersion_change), "resid_dispersion"),
+            by = "row_id") %>%
+  left_join(get_resids(metrics3, abs(richness_diff) ~ abs(richness_change), "resid_richness"),
+            by = "row_id") %>%
+  left_join(get_resids(metrics3, abs(evenness_diff) ~ abs(evenness_change), "resid_evenness"),
+            by = "row_id") %>%
+  left_join(get_resids(metrics3, rank_diff ~ rank_change, "resid_rank"),
+            by = "row_id") %>%
+  left_join(get_resids(metrics3, species_diff ~ gains, "resid_gains"),
+            by = "row_id") %>%
+  left_join(get_resids(metrics3, species_diff ~ losses, "resid_losses"),
+            by = "row_id")
 
 
 ###Import Metadata
-corredat_sitebiotic<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/environmental data/CoRRE_siteBiotic_May2023.csv")%>%
-  mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
-  filter(site_code!="GVN")
-corredat_siteclimate<-read.csv("~/Dropbox/sDiv_sCoRRE_shared/CoRRE data/CoRRE data/environmental data/CoRRE_siteLocationClimate_Dec2021.csv") 
+Questions2_MetaData<-read.csv("Questions2_MetaData.csv") %>% 
+  filter(site_project_comm!="NA")
 
-
-ScaledSiteData<-corredat_sitebiotic %>% 
-  full_join(corredat_siteclimate) %>% 
-  select(site_project_comm, anpp, MAP, MAT, rrich, annual_relcov) %>% 
+ScaledSiteData<-Questions2_MetaData %>% 
   group_by(site_project_comm) %>% 
   summarise (ANPP_scaled=mean(anpp),
              MAP_scaled=mean(MAP),
@@ -232,8 +231,8 @@ ScaledSiteData<-corredat_sitebiotic %>%
   mutate(across(where(is.numeric), scale))
 
 Resid_Meta<-full_join(ResidualData, ScaledSiteData) %>% 
-  filter(richness_change!="NA")
-#This is the dataset you now use for Table S3 (which needs metrics3 for the data and Resid_Meta for the metadata) and for Figure 5 which just uses Resid_Meta as the analysis is on the residuals in that one. 
+  filter(!is.na(richness_change))
+#This is the dataset you now use for Table S3 and for Figure 5 
 
 #Table S3 - Checking to see if pattern in Fig 4 is driven by site level characteristics
 TableS3_models <- list(
@@ -241,15 +240,15 @@ TableS3_models <- list(
                      MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
                    data = Resid_Meta),
   
-  Dispersion = lm(abs_dispersion_diff ~ dispersion_change + MAP_scaled + MAT_scaled +
+  Dispersion = lm(abs_dispersion_diff ~ abs(dispersion_change) + MAP_scaled + MAT_scaled +
                     MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
                   data = Resid_Meta),
   
-  Richness = lm(richness_diff ~ richness_change + MAP_scaled + MAT_scaled +
+  Richness = lm(abs(richness_diff) ~ abs(richness_change) + MAP_scaled + MAT_scaled +
                   MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
                 data = Resid_Meta),
   
-  Evenness = lm(evenness_diff ~ evenness_change + MAP_scaled + MAT_scaled +
+  Evenness = lm(abs(evenness_diff) ~ abs(evenness_change) + MAP_scaled + MAT_scaled +
                   MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
                 data = Resid_Meta),
   
@@ -268,9 +267,9 @@ TableS3_models <- list(
 
 change_terms <- c(
   Composition = "composition_change",
-  Dispersion = "dispersion_change",
-  Richness = "richness_change",
-  Evenness = "evenness_change",
+  Dispersion = "abs(dispersion_change)",
+  Richness = "abs(richness_change)",
+  Evenness = "abs(evenness_change)",
   Rank = "rank_change",
   `Species gains` = "gains",
   `Species losses` = "losses"
@@ -290,12 +289,8 @@ TableS3 <- purrr::imap_dfr(TableS3_models, function(mod, metric_name) {
 })
 
 TableS3
-write.csv(TableS3, "TableS3_RobustnessModels.csv",
-          row.names = FALSE)
 
-
-
-
+#write.csv(TableS3, "TableS3_RobustnessModels.csv", row.names = FALSE)
 
 
 
@@ -303,33 +298,56 @@ write.csv(TableS3, "TableS3_RobustnessModels.csv",
 ####multiple regression of residuals vs site level characteristics
 
 #Multiple Regression
-comp_change<-(lm(modA$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(comp_change)
 
-disp_change<-(lm(modB$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(disp_change)
+# Run Figure 5 residual models
+Fig5_models <- list(
+  comp_change = lm(resid_composition ~ MAP_scaled + MAT_scaled +
+                     MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+                   data = Resid_Meta),
+  
+  disp_change = lm(resid_dispersion ~ MAP_scaled + MAT_scaled +
+                     MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+                   data = Resid_Meta),
+  
+  rich_change = lm(resid_richness ~ MAP_scaled + MAT_scaled +
+                     MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+                   data = Resid_Meta),
+  
+  even_change = lm(resid_evenness ~ MAP_scaled + MAT_scaled +
+                     MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+                   data = Resid_Meta),
+  
+  rankk_change = lm(resid_rank ~ MAP_scaled + MAT_scaled +
+                      MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+                    data = Resid_Meta),
+  
+  gains = lm(resid_gains ~ MAP_scaled + MAT_scaled +
+               MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+             data = Resid_Meta),
+  
+  losses = lm(resid_losses ~ MAP_scaled + MAT_scaled +
+                MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled,
+              data = Resid_Meta)
+)
 
-rich_change<-(lm(modC$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(rich_change)
-
-even_change<-(lm(modD$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(even_change)
-
-rank_change<-(lm(modE$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(rank_change)
-
-gains_change<-(lm(modF$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(gains_change)
-
-losses_change<-(lm(modG$residuals~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=Resid_Meta))
-summary(losses_change)
-
-EffectSize<-read.csv("~/Dropbox/C2E/Products/Control Paper/Q2_MultipleRegs_Dec2025_scaled.csv", header = TRUE)
+# Extract model coefficients directly
+EffectSize <- purrr::imap_dfr(Fig5_models, function(mod, metric_name) {
+  broom::tidy(mod) %>%
+    filter(term != "(Intercept)") %>%
+    mutate(community_metric = metric_name)
+}) %>%
+  rename(
+    drivers = term,
+    Estimate = estimate,
+    Std.Error = std.error,
+    tvalue = statistic,
+    P = p.value
+  )
+EffectSize
 
 # Prepare data
 dat_plot <- EffectSize %>%
   filter(drivers != "(Intercept)") %>%
-  select(-X, -X.1, -X.2, -X.3, -X.4, -X.5, -X.6) %>% 
   mutate(drivers2=drivers) %>% 
   mutate(
     drivers2 = factor(drivers, levels = rev(c("MAT", "MAP", "MAP:MAT", "annual_relcov", "rrich"))),
@@ -405,106 +423,7 @@ ggplot(dat_plot2, aes(x = drivers, y = Estimate, ymin = CI_lower, ymax = CI_uppe
 
 
 
-####Nutrients Only using only the first ten years of the experiments
-corredat_ct2<-corredat_ct%>%
-  right_join(datasetlength)%>%
-  filter(treatment_year!=0)%>% 
-  filter(nutrients==1) %>% 
-  filter(trt_type=="N"|trt_type=="P"|trt_type=="N*P"|trt_type=="mult_nutrient"|trt_type=="control") %>% 
-  filter(site_project_comm!="SIU_TON_0")
 
-#### find full length of dataset
-
-years<-corredat_ct2 %>% 
-  ungroup() %>% 
-  select(site_code, project_name, community_type, calendar_year) %>% 
-  group_by(site_code, project_name, community_type) %>% 
-  unique() %>% 
-  summarise(years=length(calendar_year))
-
-###get mult_change
-#####look at mult change
-corredat_ct3<-corredat_ct2 %>% 
-  filter(plot_mani==0) 
-
-spc<-unique(corredat_ct3$spct)
-mult_change<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-corredat_ct3%>%
-    filter(spct==spc[i])
-  
-  out<-multivariate_change(subset, time.var = 'treatment_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id')
-  out$spct<-spc[i]
-  
-  mult_change<-rbind(mult_change, out)
-}
-
-
-#####look at mult difference (need a double loop)
-spc<-unique(corredat_ct2$site_project_comm)
-diff_mult<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-corredat_ct2%>%
-    filter(site_project_comm==spc[i])
-  
-  ref_trt <- unique(subset(subset, plot_mani==0)$trt)
-  
-  out<-multivariate_difference(subset, time.var = 'treatment_year', species.var = "species_matched", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = "trt", reference.treatment = ref_trt)
-  
-  out$site_project_comm<-spc[i]
-  
-  diff_mult<-rbind(diff_mult, out)
-}
-
-diff_mult2<-diff_mult %>% 
-  rename(treatment_year2=treatment_year)
-mult_change2<-mult_change %>% 
-  separate(spct, into=c("site_project_comm", "treatment"), sep="::") %>% 
-  select(-treatment, -treatment_year)
-
-multivariate<-mult_change2 %>% 
-  right_join(diff_mult2) 
-
-
-###use ct_diff
-###use control_change, but average across plots
-control_change2<-control_change %>% 
-  group_by(site_project_comm, treatment_year, treatment_year2)%>%
-  summarize_at(vars(richness_change, evenness_change, rank_change, gains, losses), list(mean), na.rm=T)%>%
-  ungroup() 
-
-RACs<-control_change2 %>% 
-  right_join(ct_diff) %>% 
-  right_join(datasetlength)
-
-#get data list
-datalist<-RACs%>%
-  group_by(site_project_comm) %>% 
-  select(treatment_year) %>% 
-  unique() %>% 
-  summarise(years=n())
-
-#####Merger RACs with Mult and drop all but four timepoints for all
-Metrics<-RACs%>%
-  right_join(multivariate)%>%
-  filter(treatment_year!="NA")%>%
-  filter(treatment_year!=0) %>% 
-  group_by(site_project_comm, trt, trt2)%>%
-  mutate(timestep=treatment_year2-treatment_year) %>% 
-  filter(timestep==1) %>%
-  filter(site_project_comm!="ASGA_Exp1_a")%>%
-  filter(treatment_year2<11) %>% 
-  sample_n(4) 
-
-
-#### Metrics == CvT_Metrics_RACsMult_4timepoints_July2019.csv IS THE DATA TO USE - Every time you run this and export it, it changes. ALSO somehow above 9 datasets are added in that are not supposed to be now. so the JULY2019 export is the correct export to use. 
-
-#Export it now, and then reimport it that way you can skip all the precvious steps. It takes a long time to run.
-#write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Oct2020_D.csv" , row.names=F)
-write.csv(Metrics,"C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Dec2025_nutonly_10yrless.csv" , row.names=F)
-#####################################################################################
 ##################START HERE NOW THAT THINGS ARE CALCULATED##########################
 ###################Control_Change vs Difference using 4 yrs only######################
 #####################################################################################

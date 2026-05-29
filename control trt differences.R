@@ -4,7 +4,6 @@ library(ggplot2)
 library(devtools)
 #install_github("NCEAS/codyn", ref = "sp_diff_test")
 library(tidyverse)
-library(broom)
 library(codyn)
 setwd("~/Dropbox/")
 
@@ -1251,7 +1250,6 @@ summary(modG)
 #####
 ##### Make Figure S1 with this trt-contorl data - seperate for trt and control
 ####FIGURE S1 - Show that things are NOT changing directionally in the controls but they are for the trt plots
-####use all years of the data for all sites
 data_directionalchange_alldata<-corredat_ct2 %>% ### this is the relativized sp comp data of only the experiments used in analysis 2
   filter(site_project_comm!="ASGA_Exp1_a") %>% 
   mutate(dropplots=paste(spct, plot_id, sep="_")) %>% 
