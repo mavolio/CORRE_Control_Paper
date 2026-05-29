@@ -221,8 +221,6 @@ print(Losses, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 
 
 ####TABLE S2 - looking at how change varies with site level characteristics ####
-
-
 ### Bring in Site Level Metadata 
 Meta5<-read.csv("Question1_MetaData.csv") %>% 
   mutate(annual_relcov=as.numeric(annual_relcov))
@@ -365,7 +363,7 @@ AdjustPVals<-PVals %>%
 
 ####Multiple regressions
 
-#correlations
+#first check for correlated variables - correlations
 head(YearlyLevelData2)
 
 panel.cor <- function(x, y, digits = 3, ...){
@@ -425,7 +423,7 @@ ScaledSiteData<-YearlyLevelData2 %>%
   mutate(across(where(is.numeric), scale))
 # standardize data now!
 
-### PCA
+### PCA - Figure S2
 dat<- ScaledSiteData
 pca <- princomp(dat[3:6])
 biplot(pca)
