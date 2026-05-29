@@ -1,8 +1,6 @@
 ##richness and evenness changes through time
 library(codyn)
 library(ggplot2)
-theme_set(theme_bw(12))+
-  theme_update(panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 library(devtools)
 #install_github("NCEAS/codyn", ref = "sp_diff_test")
 library(tidyverse)
