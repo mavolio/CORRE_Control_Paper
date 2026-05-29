@@ -183,6 +183,10 @@ print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
 print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
 #Export 1000x500
 
+
+
+
+
 #### Calculate Residuals from the models in Figure 4
 metrics3 <- metrics3 %>%
   mutate(row_id = row_number())
@@ -421,18 +425,13 @@ ggplot(dat_plot2, aes(x = drivers, y = Estimate, ymin = CI_lower, ymax = CI_uppe
 
 
 
+###CLEAR EVERYTHING AND STart fresh here as some of the names are repeat used here again.
+##Import Data for Subset2 Analysis - where data was used from any years of experiments and four timesteps were chosen randomly
+metrics2<-read.csv("Question2_Subset2-4timepoints-fromAnyYr.csv")
 
-
-
-##################START HERE NOW THAT THINGS ARE CALCULATED##########################
-###################Control_Change vs Difference using 4 yrs only######################
-#####################################################################################
-
-metrics2<-read.csv("C2E/Products/Control Paper/Output/CvT_Metrics_RACsMult_4timepoints_Dec2025_nutonly_10yrless.csv")
-
-###list
+###list so we know which datasets we are using in this analysis
 list<-  as.data.frame(unique(metrics2$site_project_comm))
-#write.csv(list, "C2E/Products/Control Paper/Output/listofQ2sites_May2023_5ormoreyrs_nutonly.csv")
+
 
 #### find number of sites, numbers of experiments, and number of control trt comparisons
 site<-metrics2 %>% 
@@ -449,7 +448,7 @@ comparisons<-metrics2 %>%
   select(site, project, comm, trt2) %>% 
   unique()
 
-
+#Get average so only 1 dot per sitextrt (i.e., average across yrs)
 metrics3<-metrics2 %>% 
   group_by(site_project_comm,trt2)%>%
   summarise(richness_change=mean(richness_change, na.rm=T),
@@ -467,9 +466,189 @@ metrics3<-metrics2 %>%
             abs_dispersion_diff=mean(abs_dispersion_diff, na.rm=T))%>%
   ungroup()
 
-### get only GCD plots
+
+#Make Figure S5
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(composition_change, composition_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0)) %>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+A<-ggplot(data=metrics3, aes(x=composition_change, y=composition_diff))+
+  geom_point()+
+ # geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Composition Change",
+    y = "Composition Difference")
 
 
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(dispersion_change), abs_dispersion_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(dispersion_change), abs_dispersion_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+B<-ggplot(data=metrics3, aes(x=abs(dispersion_change), y=abs_dispersion_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Dispersion Change|",
+    y = "|Dispersion Difference|")
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(richness_change), abs(richness_diff))$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(richness_change), abs(richness_diff))$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+C<-ggplot(data=metrics3, aes(x=abs(richness_change), y=abs(richness_diff)))+
+  geom_point()+
+  #geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Richness Change|",
+    y = "|Richness Difference|")
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(abs(evenness_change), abs(evenness_diff))$estimate),
+                            digits=3), 
+            p.value = (cor.test(abs(evenness_change), abs(evenness_diff))$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+D<-ggplot(data=metrics3, aes(x=abs(evenness_change), y=abs(evenness_diff)))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "|Evenness Change|",
+    y = "|Evenness Difference|")
+
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(rank_change, rank_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(rank_change, rank_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+E<-ggplot(data=metrics3, aes(x=rank_change, y=rank_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Rank Change",
+    y = "Rank Difference")
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(gains, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(gains, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+G<-ggplot(data=metrics3, aes(x=gains, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Gains",
+    y = "Species Difference")
+
+rvalues <- metrics3 %>%
+  summarize(r.value = round((cor.test(losses, species_diff)$estimate),
+                            digits=3), 
+            p.value = (cor.test(losses, species_diff)$p.value))%>%
+  mutate(sig=ifelse(p.value<0.05, 1, 0))%>% 
+  mutate(PAdjust=p.adjust(p.value, method="BH", n=7))
+
+H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
+  geom_point()+
+  geom_smooth(method="lm", se=F)+
+  geom_text(data=rvalues, mapping=aes(x=Inf, y = Inf, label = r.value), hjust=1.05, vjust=1.5)+
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray40")+
+  labs(
+    x = "Losses",
+    y = "Species Difference")
+
+
+library(grid)
+pushViewport(viewport(layout=grid.layout(2,4)))
+print(A, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(B, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(C, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(D, vp=viewport(layout.pos.row = 1, layout.pos.col = 4))
+print(E, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(G, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(H, vp=viewport(layout.pos.row = 2, layout.pos.col = 3))
+print(I, vp=viewport(layout.pos.row = 2, layout.pos.col = 4))
+#Export 1000x500
+
+
+
+
+
+
+
+
+
+
+
+####SUBSET 3 Analysis for Supp Figure S6
+###CLEAR EVERYTHING AND STart fresh here as some of the names are repeat used here again.
+##Import Data for Subset3 Analysis - where data was used from any years of experiments and four timesteps were chosen randomly
+metrics2<-read.csv("Question2_Subset3-NutrientOnly-4timepoints-from<11thYr.csv")
+
+###list so we know which datasets we are using in this analysis
+list<-  as.data.frame(unique(metrics2$site_project_comm))
+
+
+#### find number of sites, numbers of experiments, and number of control trt comparisons
+site<-metrics2 %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>% 
+  select(site) %>% 
+  unique()
+
+exp<-metrics2 %>% 
+  select(site_project_comm) %>% 
+  unique()
+
+comparisons<-metrics2 %>% 
+  separate(site_project_comm, into=c("site", "project", "comm"), sep="_") %>%
+  select(site, project, comm, trt2) %>% 
+  unique()
+
+#Get average so only 1 dot per sitextrt (i.e., average across yrs)
+metrics3<-metrics2 %>% 
+  group_by(site_project_comm,trt2)%>%
+  summarise(richness_change=mean(richness_change, na.rm=T),
+            richness_diff=mean(richness_diff, na.rm=T),
+            evenness_change=mean(evenness_change, na.rm=T),
+            evenness_diff=mean(evenness_diff, na.rm=T),
+            rank_change=mean(rank_change, na.rm=T),
+            rank_diff=mean(rank_diff, na.rm=T),
+            gains=mean(gains, na.rm=T),
+            losses=mean(losses, na.rm=T),
+            species_diff=mean(species_diff, na.rm=T),
+            composition_change=mean(composition_change, na.rm=T),
+            composition_diff=mean(composition_diff, na.rm=T),
+            dispersion_change=mean(dispersion_change, na.rm=T),
+            abs_dispersion_diff=mean(abs_dispersion_diff, na.rm=T))%>%
+  ungroup()
+
+
+#Make Figure S6
 rvalues <- metrics3 %>%
   summarize(r.value = round((cor.test(composition_change, composition_diff)$estimate),
                             digits=3), 
@@ -587,7 +766,6 @@ H<-ggplot(data=metrics3, aes(x=losses, y=species_diff))+
 
 library(grid)
 pushViewport(viewport(layout=grid.layout(2,4)))
-print(CvCT, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(A, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(B, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
 print(C, vp=viewport(layout.pos.row = 1, layout.pos.col = 3))
