@@ -441,30 +441,74 @@ YearlyLevelData3<- YearlyLevelData2 %>%
   full_join(ScaledSiteData)
 head(YearlyLevelData3)
 
-comp_change<-(lm(composition_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(comp_change)
+#### Q1 multiple regressions run directly from YearlyLevelData3 ####
 
-disp_change<-(lm(dispersion_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(disp_change)
+# List response variables and desired figure labels
+q1_response_vars <- c(
+  comp_change = "composition_change",
+  disp_change = "dispersion_change",
+  rich_change = "richness_change",
+  even_change = "evenness_change",
+  rank_change = "rank_change",
+  gains       = "gains",
+  losses      = "losses"
+)
 
-rich_change<-(lm(richness_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(rich_change)
+# Function to run one model and return tidy coefficients + model fit
+run_q1_model <- function(response_var, metric_name, data) {
+  
+  model_formula <- as.formula(
+    paste0(response_var,
+           " ~ MAP_scaled + MAT_scaled + MAP_scaled:MAT_scaled + rrich_scaled + annual_recov_scaled")
+  )
+  
+  mod <- lm(model_formula, data = data)
+  
+  broom::tidy(mod) %>%
+    mutate(
+      community_metric = metric_name,
+      adj_r_squared = broom::glance(mod)$adj.r.squared,
+      model_p = broom::glance(mod)$p.value
+    )
+}
 
-even_change<-(lm(evenness_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(even_change)
+# Run all models and save output directly as EffectSize
+EffectSize <- purrr::imap_dfr(
+  q1_response_vars,
+  ~ run_q1_model(response_var = .x,
+                 metric_name = .y,
+                 data = YearlyLevelData3)
+) %>%
+  rename(
+    drivers = term,
+    Estimate = estimate,
+    Std.Error = std.error,
+    tvalue = statistic,
+    P = p.value
+  ) %>%
+  mutate(
+    drivers = dplyr::recode(
+      drivers,
+      "(Intercept)" = "(Intercept)",
+      "MAP_scaled" = "MAP",
+      "MAT_scaled" = "MAT",
+      "MAP_scaled:MAT_scaled" = "MAP:MAT",
+      "rrich_scaled" = "rrich",
+      "annual_recov_scaled" = "annual_relcov"
+    )
+  ) %>%
+  select(
+    community_metric,
+    drivers,
+    Estimate,
+    Std.Error,
+    tvalue,
+    P,
+    adj_r_squared,
+    model_p
+  )
 
-rank_change<-(lm(rank_change~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(rank_change)
-
-gains_change<-(lm(gains~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(gains_change)
-
-losses_change<-(lm(losses~MAP_scaled+MAT_scaled+MAP_scaled*MAT_scaled+rrich_scaled+annual_recov_scaled, data=YearlyLevelData3))
-summary(losses_change)
-
-EffectSize<-read.csv("Q1_MultipleRegs_June2025_scaled.csv", header = TRUE)
-
-# Prepare data
+# Prepare data to plot
 dat_plot <- EffectSize %>%
   filter(drivers != "(Intercept)") %>%
   mutate(
